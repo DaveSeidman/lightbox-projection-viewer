@@ -80,9 +80,9 @@ export function ProjectionScene({
       <RendererTone mode={mode} />
       <StudioEnvironment mode={mode} />
       <CameraRig />
-      <ambientLight intensity={mode === "light" ? 2.35 : 0.075} />
+      <ambientLight intensity={mode === "light" ? 2.35 : 0.16} />
       <hemisphereLight
-        args={[mode === "light" ? "#ffffff" : "#f6f7ff", mode === "light" ? "#f5f2e9" : "#080808", mode === "light" ? 0.95 : 0.055]}
+        args={[mode === "light" ? "#ffffff" : "#f6f7ff", mode === "light" ? "#f5f2e9" : "#080808", mode === "light" ? 0.95 : 0.1]}
       />
       <directionalLight
         castShadow
@@ -90,8 +90,8 @@ export function ProjectionScene({
         intensity={mode === "light" ? 0.42 : 0}
         shadow-mapSize={[2048, 2048]}
       />
-      <pointLight position={[-2.4, 1.7, 0.2]} intensity={mode === "dark" ? 1.15 : 0.4} distance={7.2} decay={2} color="#f7f8ff" />
-      <pointLight position={[2.2, 1.7, -0.2]} intensity={mode === "dark" ? 0.95 : 0.32} distance={7.2} decay={2} color="#fff7e8" />
+      <pointLight position={[-2.4, 1.7, 0.2]} intensity={mode === "dark" ? 1.8 : 0.4} distance={8.5} decay={2} color="#f7f8ff" />
+      <pointLight position={[2.2, 1.7, -0.2]} intensity={mode === "dark" ? 1.45 : 0.32} distance={8.5} decay={2} color="#fff7e8" />
 
       {showDemoRoom && (
         <DemoRoom
@@ -244,7 +244,7 @@ function RendererTone({ mode }) {
   }, [gl]);
 
   useEffect(() => {
-    gl.toneMappingExposure = mode === "light" ? 1.04 : 0.92;
+    gl.toneMappingExposure = mode === "light" ? 1.04 : 1.08;
   }, [gl, mode]);
 
   return null;
@@ -271,7 +271,7 @@ function StudioEnvironment({ mode }) {
   }, [gl, scene]);
 
   useEffect(() => {
-    scene.environmentIntensity = mode === "light" ? 1.08 : 0.04;
+    scene.environmentIntensity = mode === "light" ? 1.08 : 0.08;
 
     return () => {
       scene.environmentIntensity = previousIntensity.current;
@@ -520,17 +520,17 @@ function ReflectiveFloor({ mode }) {
     >
       <planeGeometry args={[11.5, 4.8]} />
       <MeshReflectorMaterial
-        blur={[260, 70]}
-        color={mode === "light" ? "#ece9de" : "#050506"}
-        depthScale={mode === "light" ? 0.24 : 0.5}
+        blur={[190, 52]}
+        color={mode === "light" ? "#ece9de" : "#070708"}
+        depthScale={mode === "light" ? 0.24 : 0.62}
         maxDepthThreshold={1.4}
         minDepthThreshold={0.18}
         mixBlur={1}
-        mixStrength={mode === "light" ? 0.42 : 1.05}
+        mixStrength={mode === "light" ? 0.42 : 1.45}
         metalness={0}
-        mirror={mode === "light" ? 0.48 : 0.82}
+        mirror={mode === "light" ? 0.48 : 0.96}
         resolution={1024}
-        roughness={0.42}
+        roughness={0.34}
       />
     </mesh>
   );

@@ -308,7 +308,7 @@ function createProjectionMaterial({ texture, uv, mode }) {
     map: projectedTexture,
     emissiveMap: projectedTexture,
     emissive: new THREE.Color("#ffffff"),
-    emissiveIntensity: mode === "dark" ? 1.15 * uv.brightness : 0.32 * uv.brightness,
+    emissiveIntensity: mode === "dark" ? 3.2 * uv.brightness : 0.32 * uv.brightness,
     roughness: 0.7,
     metalness: 0,
     envMapIntensity: mode === "dark" ? 0.02 : 0.18,
