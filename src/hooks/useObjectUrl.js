@@ -28,6 +28,22 @@ export function useObjectUrls() {
     return records;
   };
 
+  const addFiles = (nextFiles) => {
+    const openSlots = Math.max(MAX_MEDIA_FILES - files.length, 0);
+    const records = nextFiles.slice(0, openSlots).map((file, index) => {
+      const id = `${Date.now()}-${files.length + index}-${file.name}`;
+      const url = URL.createObjectURL(file);
+      objectUrlsRef.current.set(id, url);
+      return { id, name: file.name, type: file.type, url };
+    });
+
+    if (records.length) {
+      setFilesState((current) => [...current, ...records].slice(0, MAX_MEDIA_FILES));
+    }
+
+    return records;
+  };
+
   const clearFile = (id) => {
     const url = objectUrlsRef.current.get(id);
     if (url) URL.revokeObjectURL(url);
@@ -41,5 +57,5 @@ export function useObjectUrls() {
     setFilesState([]);
   };
 
-  return { files, setFiles, clearFile, clearFiles };
+  return { files, setFiles, addFiles, clearFile, clearFiles };
 }

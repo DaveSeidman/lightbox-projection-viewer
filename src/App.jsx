@@ -55,14 +55,22 @@ function App() {
   const handleMediaFile = (event) => {
     const files = [...(event.target.files || [])].slice(0, MAX_MEDIA_FILES);
     if (!files.length) return;
-    const records = mediaFiles.setFiles(files);
-    const nextPlacements = {};
-    records.forEach((file, index) => {
-      nextPlacements[file.id] = defaultPlacementForIndex(index, records.length);
+    const records = mediaFiles.addFiles(files);
+    if (!records.length) {
+      event.target.value = "";
+      return;
+    }
+
+    const total = mediaFiles.files.length + records.length;
+    setLayoutPlacements((current) => {
+      const nextPlacements = { ...current };
+      records.forEach((file, index) => {
+        nextPlacements[file.id] = defaultPlacementForIndex(mediaFiles.files.length + index, total);
+      });
+      return nextPlacements;
     });
-    setLayoutPlacements(nextPlacements);
-    setActiveMediaId(Object.keys(nextPlacements)[0] || "");
-    setPlayback(files.some((file) => file.type.startsWith("video/")) ? "ready" : "static");
+    setActiveMediaId(records[0]?.id || "");
+    setPlayback([...mediaFiles.files, ...records].some((file) => file.type.startsWith("video/")) ? "ready" : "static");
     event.target.value = "";
   };
 
