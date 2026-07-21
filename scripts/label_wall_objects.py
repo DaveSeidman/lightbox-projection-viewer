@@ -4,7 +4,7 @@ import bpy
 
 
 BASE_DIR = Path("/Users/daveseidman/Documents/personal/lightbox/internal/3d-model")
-BLEND_PATH = BASE_DIR / "240_west_37th.blend"
+BLEND_PATH = BASE_DIR / "etc" / "240_west_37th.blend"
 PUBLIC_GLB_PATH = BASE_DIR / "public" / "240_west_37th_projection.glb"
 DIST_GLB_PATH = BASE_DIR / "dist" / "240_west_37th_projection.glb"
 

@@ -94,14 +94,6 @@ export function ProjectionScene({
       <hemisphereLight
         args={[mode === "light" ? "#ffffff" : "#f6f7ff", mode === "light" ? "#f5f2e9" : "#080808", mode === "light" ? 0.95 : 0.1]}
       />
-      <directionalLight
-        castShadow
-        position={[3.5, 7.5, 4]}
-        intensity={mode === "light" ? 0.42 : 0}
-        shadow-mapSize={[2048, 2048]}
-      />
-      <pointLight position={[-2.4, 1.7, 0.2]} intensity={mode === "dark" ? 1.8 : 0.4} distance={8.5} decay={2} color="#f7f8ff" />
-      <pointLight position={[2.2, 1.7, -0.2]} intensity={mode === "dark" ? 1.45 : 0.32} distance={8.5} decay={2} color="#fff7e8" />
 
       {showDemoRoom && (
         <DemoRoom

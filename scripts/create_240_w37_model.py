@@ -6,7 +6,7 @@ from mathutils import Vector
 
 
 BASE_DIR = Path("/Users/daveseidman/Documents/personal/lightbox/internal/3d-model")
-OUTPUT_BLEND = BASE_DIR / "240_west_37th_side_by_side_model.blend"
+OUTPUT_BLEND = BASE_DIR / "etc" / "240_west_37th_side_by_side_model.blend"
 WALL_JOINT_GAP = 0.035
 FLOOR_Z = -0.18
 FLOOR_THICKNESS = 0.10
