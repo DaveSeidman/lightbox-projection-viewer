@@ -1,7 +1,9 @@
 import { useCallback, useState } from "react";
 import { ControlPanel } from "./components/ControlPanel.jsx";
+import { DEFAULT_OUTLINE_URL, LayoutCanvas } from "./components/LayoutCanvas.jsx";
 import { TopBar } from "./components/TopBar.jsx";
 import { DEFAULT_UV } from "./data/projection.js";
+import { LAYOUT_HEIGHT, LAYOUT_WIDTH, useLayoutTexture } from "./hooks/useLayoutTexture.js";
 import { useObjectUrl } from "./hooks/useObjectUrl.js";
 import { useMediaTexture } from "./hooks/useVideoTexture.js";
 import { ProjectionCanvas } from "./scene/ProjectionCanvas.jsx";
@@ -17,6 +19,12 @@ const DEFAULT_REFLECTION = {
   blur: 1,
   strength: 1,
 };
+const DEFAULT_LAYOUT_PLACEMENT = {
+  x: 0,
+  y: 0,
+  width: LAYOUT_WIDTH,
+  height: LAYOUT_HEIGHT,
+};
 
 function App() {
   const [mode, setMode] = useState("light");
@@ -28,11 +36,18 @@ function App() {
   const [showPlants, setShowPlants] = useState(true);
   const [preset, setPreset] = useState("lounge");
   const [panelOpen, setPanelOpen] = useState(true);
+  const [layoutOpen, setLayoutOpen] = useState(true);
+  const [layoutPlacement, setLayoutPlacement] = useState(DEFAULT_LAYOUT_PLACEMENT);
   const [cameraPath, setCameraPath] = useState(null);
   const [cameraClips, setCameraClips] = useState([]);
 
   const mediaFile = useObjectUrl();
-  const { videoElement, mediaTexture } = useMediaTexture(mediaFile.url, mediaFile.type);
+  const { videoElement, mediaElement } = useMediaTexture(mediaFile.url, mediaFile.type);
+  const { layoutCanvas, layoutTexture } = useLayoutTexture({
+    mediaElement,
+    mediaType: mediaFile.type,
+    placement: layoutPlacement,
+  });
 
   const handleMediaFile = (event) => {
     const file = event.target.files?.[0];
@@ -74,6 +89,13 @@ function App() {
     setReflection((current) => ({ ...current, [key]: Number(value) }));
   };
 
+  const handleLayoutPlacementChange = (key, value) => {
+    setLayoutPlacement((current) => normalizeLayoutPlacement({
+      ...current,
+      [key]: Number(value),
+    }));
+  };
+
   const handleCameraPath = (id) => {
     setCameraPath(id ? { id, run: Date.now() } : null);
   };
@@ -105,7 +127,7 @@ function App() {
           uv={uv}
           ao={ao}
           reflection={reflection}
-          mediaTexture={mediaTexture}
+          mediaTexture={mediaElement ? layoutTexture : null}
           modelUrl={DEFAULT_MODEL_URL}
           showDemoRoom={false}
           showFurniture={showFurniture}
@@ -118,6 +140,17 @@ function App() {
       </div>
 
       <TopBar mode={mode} onModeChange={setMode} />
+
+      <LayoutCanvas
+        layoutCanvas={layoutCanvas}
+        outlineUrl={DEFAULT_OUTLINE_URL}
+        placement={layoutPlacement}
+        panelOpen={layoutOpen}
+        hasMedia={Boolean(mediaElement)}
+        onPanelToggle={() => setLayoutOpen((value) => !value)}
+        onPlacementChange={handleLayoutPlacementChange}
+        onPlacementReset={() => setLayoutPlacement(DEFAULT_LAYOUT_PLACEMENT)}
+      />
 
       <ControlPanel
         uv={uv}
@@ -156,3 +189,19 @@ function App() {
 }
 
 export default App;
+
+function normalizeLayoutPlacement(placement) {
+  const width = clamp(placement.width, 20, LAYOUT_WIDTH);
+  const height = clamp(placement.height, 20, LAYOUT_HEIGHT);
+
+  return {
+    width,
+    height,
+    x: clamp(placement.x, 0, LAYOUT_WIDTH - width),
+    y: clamp(placement.y, 0, LAYOUT_HEIGHT - height),
+  };
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(Number.isFinite(value) ? value : min, min), max);
+}

@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import * as THREE from "three";
 
 export function useMediaTexture(source, type) {
-  const [state, setState] = useState({ videoElement: null, mediaTexture: null });
+  const [state, setState] = useState({ videoElement: null, mediaElement: null, mediaTexture: null });
 
   useEffect(() => {
     if (!source) {
-      setState({ videoElement: null, mediaTexture: null });
+      setState({ videoElement: null, mediaElement: null, mediaTexture: null });
       return undefined;
     }
 
@@ -23,7 +23,7 @@ export function useMediaTexture(source, type) {
       image.onload = () => {
         if (!active) return;
         texture.needsUpdate = true;
-        setState({ videoElement: null, mediaTexture: texture });
+        setState({ videoElement: null, mediaElement: image, mediaTexture: texture });
       };
       image.crossOrigin = "anonymous";
       image.src = source;
@@ -52,7 +52,7 @@ export function useMediaTexture(source, type) {
     texture.needsUpdate = true;
 
     video.load();
-    setState({ videoElement: video, mediaTexture: texture });
+    setState({ videoElement: video, mediaElement: video, mediaTexture: texture });
 
     return () => {
       video.pause();

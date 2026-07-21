@@ -15,7 +15,7 @@ function launchOptions() {
 
 async function sampleCanvas(page) {
   return page.evaluate(() => {
-    const canvas = document.querySelector("canvas");
+    const canvas = document.querySelector("[data-testid='canvas-host'] canvas");
     if (!canvas) return { ok: false, reason: "missing-canvas" };
 
     const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
@@ -61,7 +61,7 @@ async function sampleCanvas(page) {
 async function readAppState(page) {
   return page.evaluate(() => {
     const app = document.querySelector("[data-testid='projection-app']");
-    const canvas = document.querySelector("canvas");
+    const canvas = document.querySelector("[data-testid='canvas-host'] canvas");
     return {
       className: app?.className ?? "",
       bodyScroll: {
@@ -87,7 +87,8 @@ async function verifyViewport(browser, name, viewport) {
   page.on("pageerror", (error) => consoleErrors.push(error.message));
 
   await page.goto(targetUrl, { waitUntil: "networkidle" });
-  await page.locator("canvas").waitFor({ state: "visible", timeout: 15000 });
+  const sceneCanvas = page.locator("[data-testid='canvas-host'] canvas");
+  await sceneCanvas.waitFor({ state: "visible", timeout: 15000 });
   await page.waitForTimeout(800);
 
   const firstSample = await sampleCanvas(page);
@@ -96,7 +97,7 @@ async function verifyViewport(browser, name, viewport) {
     throw new Error(`${name}: canvas did not pass nonblank pixel check: ${JSON.stringify(firstSample)}`);
   }
 
-  const canvasBox = await page.locator("canvas").boundingBox();
+  const canvasBox = await sceneCanvas.boundingBox();
   if (!canvasBox || canvasBox.width < viewport.width * 0.85 || canvasBox.height < viewport.height * 0.85) {
     throw new Error(`${name}: canvas is not full-viewport enough: ${JSON.stringify(canvasBox)}`);
   }
