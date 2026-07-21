@@ -8,7 +8,9 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { BokehPass } from "three/examples/jsm/postprocessing/BokehPass.js";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { FilmPass } from "three/examples/jsm/postprocessing/FilmPass.js";
 import { GTAOPass } from "three/examples/jsm/postprocessing/GTAOPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
@@ -23,6 +25,7 @@ const DEFAULT_REFLECTIVE_FLOOR = {
   size: [11.5, 4.8],
 };
 const ORBIT_FOCUS_DURATION = 0.45;
+const POSTPROCESS_FOCUS_TARGET = new THREE.Vector3(0, 1.35, 0);
 
 class ProjectionAwareGTAOPass extends GTAOPass {
   _renderOverride(renderer, overrideMaterial, renderTarget, clearColor, clearAlpha) {
@@ -130,7 +133,7 @@ export function ProjectionScene({
 
       <ReflectiveFloor mode={mode} floor={reflectiveFloor} reflection={reflection} />
       <DoubleClickOrbitFocus controls={controls} />
-      <ScreenSpaceAmbientOcclusion ao={ao} />
+      <ScreenSpaceAmbientOcclusion ao={ao} mode={mode} />
       <OrbitControls
         makeDefault
         enableDamping
@@ -309,9 +312,10 @@ function StudioEnvironment({ mode }) {
   return null;
 }
 
-function ScreenSpaceAmbientOcclusion({ ao }) {
+function ScreenSpaceAmbientOcclusion({ ao, mode }) {
   const { gl, scene, camera, size } = useThree();
-  const { composer, gtaoPass, outputPass } = useMemo(() => {
+  const focusDistance = useRef(5);
+  const { bokehPass, composer, filmPass, gtaoPass, outputPass } = useMemo(() => {
     const nextComposer = new EffectComposer(gl);
     const nextGtaoPass = new ProjectionAwareGTAOPass(
       scene,
@@ -328,15 +332,25 @@ function ScreenSpaceAmbientOcclusion({ ao }) {
         rings: 2,
       },
     );
+    const nextBokehPass = new BokehPass(scene, camera, {
+      focus: focusDistance.current,
+      aperture: 0.00038,
+      maxblur: 0.0048,
+    });
+    const nextFilmPass = new FilmPass(0.035, false);
     const nextOutputPass = new OutputPass();
 
     nextComposer.setPixelRatio(Math.min(gl.getPixelRatio(), 1.5));
     nextComposer.addPass(new RenderPass(scene, camera));
     nextComposer.addPass(nextGtaoPass);
+    nextComposer.addPass(nextBokehPass);
+    nextComposer.addPass(nextFilmPass);
     nextComposer.addPass(nextOutputPass);
 
     return {
+      bokehPass: nextBokehPass,
       composer: nextComposer,
+      filmPass: nextFilmPass,
       gtaoPass: nextGtaoPass,
       outputPass: nextOutputPass,
     };
@@ -346,6 +360,15 @@ function ScreenSpaceAmbientOcclusion({ ao }) {
     composer.setPixelRatio(Math.min(gl.getPixelRatio(), 1.5));
     composer.setSize(size.width, size.height);
   }, [composer, gl, size.height, size.width]);
+
+  useEffect(() => {
+    bokehPass.enabled = true;
+    bokehPass.uniforms.aperture.value = mode === "dark" ? 0.00052 : 0.00034;
+    bokehPass.uniforms.maxblur.value = mode === "dark" ? 0.0065 : 0.0042;
+    filmPass.enabled = true;
+    filmPass.uniforms.intensity.value = mode === "dark" ? 0.065 : 0.03;
+    filmPass.uniforms.grayscale.value = false;
+  }, [bokehPass, filmPass, mode]);
 
   useEffect(() => {
     const opacity = THREE.MathUtils.clamp(ao?.opacity ?? 0, 0, 1);
@@ -379,13 +402,18 @@ function ScreenSpaceAmbientOcclusion({ ao }) {
 
   useEffect(() => {
     return () => {
+      bokehPass.dispose();
+      filmPass.dispose();
       gtaoPass.dispose();
       outputPass.dispose();
       composer.dispose();
     };
-  }, [composer, outputPass, gtaoPass]);
+  }, [bokehPass, composer, filmPass, outputPass, gtaoPass]);
 
   useFrame((_, delta) => {
+    const nextFocusDistance = THREE.MathUtils.clamp(camera.position.distanceTo(POSTPROCESS_FOCUS_TARGET), 0.8, 12);
+    focusDistance.current = THREE.MathUtils.damp(focusDistance.current, nextFocusDistance, 4, delta);
+    bokehPass.uniforms.focus.value = focusDistance.current;
     composer.render(delta);
   }, 1);
 
