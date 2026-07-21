@@ -4,8 +4,8 @@ import { DEFAULT_OUTLINE_URL, LayoutCanvas } from "./components/LayoutCanvas.jsx
 import { TopBar } from "./components/TopBar.jsx";
 import { DEFAULT_UV } from "./data/projection.js";
 import { LAYOUT_HEIGHT, LAYOUT_WIDTH, useLayoutTexture } from "./hooks/useLayoutTexture.js";
-import { useObjectUrl } from "./hooks/useObjectUrl.js";
-import { useMediaTexture } from "./hooks/useVideoTexture.js";
+import { MAX_MEDIA_FILES, useObjectUrls } from "./hooks/useObjectUrl.js";
+import { useMediaTextures } from "./hooks/useVideoTexture.js";
 import { ProjectionCanvas } from "./scene/ProjectionCanvas.jsx";
 
 const DEFAULT_MODEL_URL = `${import.meta.env.BASE_URL}240_west_37th_projection.glb`;
@@ -19,6 +19,7 @@ const DEFAULT_REFLECTION = {
   blur: 1,
   strength: 1,
 };
+const DEFAULT_MODEL_LIGHT_INTENSITY = 1;
 const DEFAULT_LAYOUT_PLACEMENT = {
   x: 0,
   y: 0,
@@ -31,48 +32,61 @@ function App() {
   const [uv, setUv] = useState(DEFAULT_UV);
   const [ao, setAo] = useState(DEFAULT_AO);
   const [reflection, setReflection] = useState(DEFAULT_REFLECTION);
+  const [modelLightIntensity, setModelLightIntensity] = useState(DEFAULT_MODEL_LIGHT_INTENSITY);
   const [playback, setPlayback] = useState("idle");
   const [showFurniture, setShowFurniture] = useState(true);
   const [showPlants, setShowPlants] = useState(true);
   const [preset, setPreset] = useState("lounge");
   const [panelOpen, setPanelOpen] = useState(true);
   const [layoutOpen, setLayoutOpen] = useState(true);
-  const [layoutPlacement, setLayoutPlacement] = useState(DEFAULT_LAYOUT_PLACEMENT);
+  const [layoutPlacements, setLayoutPlacements] = useState({});
+  const [activeMediaId, setActiveMediaId] = useState("");
   const [cameraPath, setCameraPath] = useState(null);
   const [cameraClips, setCameraClips] = useState([]);
 
-  const mediaFile = useObjectUrl();
-  const { videoElement, mediaElement } = useMediaTexture(mediaFile.url, mediaFile.type);
+  const mediaFiles = useObjectUrls();
+  const mediaItems = useMediaTextures(mediaFiles.files);
+  const videoElements = mediaItems.map((item) => item.videoElement).filter(Boolean);
   const { layoutCanvas, layoutTexture } = useLayoutTexture({
-    mediaElement,
-    mediaType: mediaFile.type,
-    placement: layoutPlacement,
+    mediaItems,
+    placements: layoutPlacements,
   });
 
   const handleMediaFile = (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    mediaFile.setFile(file);
-    setPlayback(file.type.startsWith("image/") ? "static" : "ready");
+    const files = [...(event.target.files || [])].slice(0, MAX_MEDIA_FILES);
+    if (!files.length) return;
+    const records = mediaFiles.setFiles(files);
+    const nextPlacements = {};
+    records.forEach((file, index) => {
+      nextPlacements[file.id] = defaultPlacementForIndex(index, records.length);
+    });
+    setLayoutPlacements(nextPlacements);
+    setActiveMediaId(Object.keys(nextPlacements)[0] || "");
+    setPlayback(files.some((file) => file.type.startsWith("video/")) ? "ready" : "static");
     event.target.value = "";
   };
 
   const handleClearMedia = () => {
-    mediaFile.clearFile();
+    mediaFiles.clearFiles();
+    setLayoutPlacements({});
+    setActiveMediaId("");
     setPlayback("idle");
   };
 
   const handlePlaybackToggle = async () => {
-    if (!videoElement) return;
-    if (videoElement.paused) {
+    if (!videoElements.length) return;
+    if (videoElements.some((video) => video.paused)) {
       try {
-        await videoElement.play();
+        videoElements.forEach((video) => {
+          video.currentTime = 0;
+        });
+        await Promise.all(videoElements.map((video) => video.play()));
         setPlayback("playing");
       } catch {
         setPlayback("blocked");
       }
     } else {
-      videoElement.pause();
+      videoElements.forEach((video) => video.pause());
       setPlayback("paused");
     }
   };
@@ -89,10 +103,13 @@ function App() {
     setReflection((current) => ({ ...current, [key]: Number(value) }));
   };
 
-  const handleLayoutPlacementChange = (key, value) => {
-    setLayoutPlacement((current) => normalizeLayoutPlacement({
+  const handleLayoutPlacementChange = (id, key, value) => {
+    setLayoutPlacements((current) => ({
       ...current,
-      [key]: Number(value),
+      [id]: normalizeLayoutPlacement({
+        ...(current[id] || DEFAULT_LAYOUT_PLACEMENT),
+        [key]: Number(value),
+      }),
     }));
   };
 
@@ -127,7 +144,8 @@ function App() {
           uv={uv}
           ao={ao}
           reflection={reflection}
-          mediaTexture={mediaElement ? layoutTexture : null}
+          modelLightIntensity={modelLightIntensity}
+          mediaTexture={mediaItems.length ? layoutTexture : null}
           modelUrl={DEFAULT_MODEL_URL}
           showDemoRoom={false}
           showFurniture={showFurniture}
@@ -144,23 +162,30 @@ function App() {
       <LayoutCanvas
         layoutCanvas={layoutCanvas}
         outlineUrl={DEFAULT_OUTLINE_URL}
-        placement={layoutPlacement}
+        mediaItems={mediaItems}
+        placements={layoutPlacements}
+        activeMediaId={activeMediaId}
         panelOpen={layoutOpen}
-        hasMedia={Boolean(mediaElement)}
+        hasMedia={Boolean(mediaItems.length)}
+        onActiveMediaChange={setActiveMediaId}
         onPanelToggle={() => setLayoutOpen((value) => !value)}
         onPlacementChange={handleLayoutPlacementChange}
-        onPlacementReset={() => setLayoutPlacement(DEFAULT_LAYOUT_PLACEMENT)}
+        onPlacementReset={() => {
+          if (!activeMediaId) return;
+          setLayoutPlacements((current) => ({ ...current, [activeMediaId]: DEFAULT_LAYOUT_PLACEMENT }));
+        }}
       />
 
       <ControlPanel
         uv={uv}
         ao={ao}
         reflection={reflection}
+        modelLightIntensity={modelLightIntensity}
         mode={mode}
-        mediaName={mediaFile.name || "Test pattern"}
+        mediaName={mediaFiles.files.length ? `${mediaFiles.files.length} media file${mediaFiles.files.length === 1 ? "" : "s"}` : "Fallback"}
         playback={playback}
-        hasMedia={Boolean(mediaFile.url)}
-        canPlay={Boolean(videoElement)}
+        hasMedia={Boolean(mediaFiles.files.length)}
+        canPlay={Boolean(videoElements.length)}
         panelOpen={panelOpen}
         showFurniture={showFurniture}
         showPlants={showPlants}
@@ -177,6 +202,8 @@ function App() {
         onAoReset={() => setAo(DEFAULT_AO)}
         onReflectionChange={handleReflectionChange}
         onReflectionReset={() => setReflection(DEFAULT_REFLECTION)}
+        onModelLightIntensityChange={(value) => setModelLightIntensity(Number(value))}
+        onModelLightIntensityReset={() => setModelLightIntensity(DEFAULT_MODEL_LIGHT_INTENSITY)}
         onShowFurnitureChange={setShowFurniture}
         onShowPlantsChange={setShowPlants}
         onPresetChange={setPreset}
@@ -204,4 +231,14 @@ function normalizeLayoutPlacement(placement) {
 
 function clamp(value, min, max) {
   return Math.min(Math.max(Number.isFinite(value) ? value : min, min), max);
+}
+
+function defaultPlacementForIndex(index, total) {
+  const width = LAYOUT_WIDTH / total;
+  return normalizeLayoutPlacement({
+    x: width * index,
+    y: 0,
+    width,
+    height: LAYOUT_HEIGHT,
+  });
 }

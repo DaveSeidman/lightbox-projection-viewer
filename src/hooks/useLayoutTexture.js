@@ -4,7 +4,7 @@ import * as THREE from "three";
 export const LAYOUT_WIDTH = 10300;
 export const LAYOUT_HEIGHT = 1080;
 
-export function useLayoutTexture({ mediaElement, mediaType, placement }) {
+export function useLayoutTexture({ mediaItems, placements }) {
   const canvas = useMemo(() => {
     const nextCanvas = document.createElement("canvas");
     nextCanvas.width = LAYOUT_WIDTH;
@@ -35,15 +35,18 @@ export function useLayoutTexture({ mediaElement, mediaType, placement }) {
       context.fillStyle = "#050608";
       context.fillRect(0, 0, LAYOUT_WIDTH, LAYOUT_HEIGHT);
 
-      if (canDrawMedia(mediaElement, mediaType)) {
+      mediaItems.forEach((item) => {
+        const placement = placements[item.id];
+        if (!placement || !canDrawMedia(item.mediaElement, item.type)) return;
+
         context.drawImage(
-          mediaElement,
+          item.mediaElement,
           placement.x,
           placement.y,
           placement.width,
           placement.height,
         );
-      }
+      });
 
       texture.needsUpdate = true;
       frameId = requestAnimationFrame(draw);
@@ -55,7 +58,7 @@ export function useLayoutTexture({ mediaElement, mediaType, placement }) {
       active = false;
       cancelAnimationFrame(frameId);
     };
-  }, [canvas, mediaElement, mediaType, placement, texture]);
+  }, [canvas, mediaItems, placements, texture]);
 
   useEffect(() => {
     return () => {

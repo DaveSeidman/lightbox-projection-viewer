@@ -599,6 +599,11 @@ button {
     text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8);
     cursor: move;
 
+    &--active {
+      border-color: #ffffff;
+      box-shadow: 0 0 0 2px $gold, 0 0 18px rgba(224, 178, 79, 0.45);
+    }
+
     span {
       max-width: 100%;
       overflow: hidden;
@@ -606,6 +611,63 @@ button {
       text-overflow: ellipsis;
       white-space: nowrap;
       font-size: 0.72rem;
+    }
+  }
+
+  &__layers {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  &__layer-button {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr);
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 0 8px;
+    border-radius: 7px;
+    background: rgba(28, 35, 39, 0.08);
+    color: inherit;
+    cursor: pointer;
+
+    .projection-app--dark & {
+      background: rgba(235, 241, 244, 0.1);
+    }
+
+    &--active {
+      background: rgba(30, 109, 128, 0.16);
+      color: #123f4a;
+
+      .projection-app--dark & {
+        background: rgba(224, 178, 79, 0.24);
+        color: #f7df9f;
+      }
+    }
+
+    span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      background: rgba(28, 35, 39, 0.12);
+      font-size: 0.72rem;
+
+      .projection-app--dark & {
+        background: rgba(235, 241, 244, 0.14);
+      }
+    }
+
+    strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 0.78rem;
+      font-weight: 650;
+      text-align: left;
     }
   }
 

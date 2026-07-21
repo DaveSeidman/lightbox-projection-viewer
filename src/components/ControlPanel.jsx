@@ -3,6 +3,7 @@ import {
   Circle,
   Clapperboard,
   Flower2,
+  Lightbulb,
   Play,
   Pause,
   Waves,
@@ -18,6 +19,7 @@ export function ControlPanel({
   uv,
   ao,
   reflection,
+  modelLightIntensity,
   mode,
   mediaName,
   playback,
@@ -39,6 +41,8 @@ export function ControlPanel({
   onAoReset,
   onReflectionChange,
   onReflectionReset,
+  onModelLightIntensityChange,
+  onModelLightIntensityReset,
   onShowFurnitureChange,
   onShowPlantsChange,
   onPresetChange,
@@ -73,6 +77,7 @@ export function ControlPanel({
                 <input
                   type="file"
                   accept="video/*,image/*"
+                  multiple
                   onChange={onMediaFile}
                 />
               </label>
@@ -132,6 +137,17 @@ export function ControlPanel({
             </div>
             <Slider label="Blur" value={reflection.blur} min={0} max={2} step={0.01} onChange={(value) => onReflectionChange("blur", value)} />
             <Slider label="Strength" value={reflection.strength} min={0} max={2} step={0.01} onChange={(value) => onReflectionChange("strength", value)} />
+          </section>
+
+          <section className="projection-controls__section">
+            <div className="projection-controls__section-title">
+              <Lightbulb size={16} />
+              <span>Model Lights</span>
+              <button className="projection-controls__ghost-button" onClick={onModelLightIntensityReset} type="button">
+                Reset
+              </button>
+            </div>
+            <Slider label="Intensity" value={modelLightIntensity} min={0} max={6} step={0.01} onChange={onModelLightIntensityChange} />
           </section>
 
           <section className="projection-controls__section">

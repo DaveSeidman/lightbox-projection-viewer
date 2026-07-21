@@ -1,33 +1,26 @@
 import { ChevronRight, Maximize2, Move } from "lucide-react";
 import { useEffect, useRef } from "react";
+import wallsUvMapUrl from "../assets/images/walls-uv-map.png";
 import { LAYOUT_HEIGHT, LAYOUT_WIDTH } from "../hooks/useLayoutTexture.js";
 
-const outlineModules = import.meta.glob("../assets/images/*.{avif,gif,jpeg,jpg,png,svg,webp}", {
-  eager: true,
-  import: "default",
-  query: "?url",
-});
-
-export const DEFAULT_OUTLINE_URL = Object.values(outlineModules)[0] || "";
+export const DEFAULT_OUTLINE_URL = wallsUvMapUrl;
 
 export function LayoutCanvas({
   layoutCanvas,
   outlineUrl,
-  placement,
+  mediaItems,
+  placements,
+  activeMediaId,
   panelOpen,
   hasMedia,
+  onActiveMediaChange,
   onPanelToggle,
   onPlacementChange,
   onPlacementReset,
 }) {
   const previewRef = useRef(null);
-
-  const previewStyle = {
-    "--media-x": `${(placement.x / LAYOUT_WIDTH) * 100}%`,
-    "--media-y": `${(placement.y / LAYOUT_HEIGHT) * 100}%`,
-    "--media-width": `${(placement.width / LAYOUT_WIDTH) * 100}%`,
-    "--media-height": `${(placement.height / LAYOUT_HEIGHT) * 100}%`,
-  };
+  const activeItem = mediaItems.find((item) => item.id === activeMediaId) || mediaItems[0] || null;
+  const activePlacement = activeItem ? placements[activeItem.id] : null;
 
   return (
     <section className={`layout-canvas${panelOpen ? "" : " layout-canvas--collapsed"}`}>
@@ -49,40 +42,82 @@ export function LayoutCanvas({
           <div
             ref={previewRef}
             className={`layout-canvas__preview${hasMedia ? "" : " layout-canvas__preview--empty"}`}
-            style={previewStyle}
           >
             {outlineUrl && (
               <img className="layout-canvas__outline" src={outlineUrl} alt="" draggable="false" />
             )}
             {layoutCanvas && <PreviewCompositeCanvas source={layoutCanvas} />}
-            <div
-              className="layout-canvas__media-box"
-              onPointerDown={(event) => beginPlacementDrag(event, "move", previewRef.current, placement, onPlacementChange)}
-            >
-              <span>{hasMedia ? "Media" : "Upload media"}</span>
-              <button
-                className="layout-canvas__resize-handle"
-                onPointerDown={(event) => beginPlacementDrag(event, "resize", previewRef.current, placement, onPlacementChange)}
-                type="button"
-                title="Resize media"
-              />
-            </div>
+            {mediaItems.map((item) => {
+              const placement = placements[item.id];
+              if (!placement) return null;
+
+              return (
+                <div
+                  key={item.id}
+                  className={`layout-canvas__media-box${item.id === activeItem?.id ? " layout-canvas__media-box--active" : ""}`}
+                  onPointerDown={(event) => {
+                    onActiveMediaChange(item.id);
+                    beginPlacementDrag(event, "move", item.id, previewRef.current, placement, onPlacementChange);
+                  }}
+                  style={mediaBoxStyle(placement)}
+                >
+                  <span>{item.name}</span>
+                  <button
+                    className="layout-canvas__resize-handle"
+                    onPointerDown={(event) => {
+                      onActiveMediaChange(item.id);
+                      beginPlacementDrag(event, "resize", item.id, previewRef.current, placement, onPlacementChange);
+                    }}
+                    type="button"
+                    title={`Resize ${item.name}`}
+                  />
+                </div>
+              );
+            })}
           </div>
 
-          <div className="layout-canvas__controls">
-            <NumberField label="X" value={placement.x} min={0} max={LAYOUT_WIDTH} step={10} onChange={(value) => onPlacementChange("x", value)} />
-            <NumberField label="Y" value={placement.y} min={0} max={LAYOUT_HEIGHT} step={2} onChange={(value) => onPlacementChange("y", value)} />
-            <NumberField label="W" value={placement.width} min={20} max={LAYOUT_WIDTH} step={10} onChange={(value) => onPlacementChange("width", value)} />
-            <NumberField label="H" value={placement.height} min={20} max={LAYOUT_HEIGHT} step={2} onChange={(value) => onPlacementChange("height", value)} />
-            <button className="layout-canvas__reset-button" onClick={onPlacementReset} type="button">
-              <Maximize2 size={14} />
-              <span>Reset</span>
-            </button>
-          </div>
+          {mediaItems.length > 0 && (
+            <div className="layout-canvas__layers">
+              {mediaItems.map((item, index) => (
+                <button
+                  key={item.id}
+                  className={`layout-canvas__layer-button${item.id === activeItem?.id ? " layout-canvas__layer-button--active" : ""}`}
+                  onClick={() => onActiveMediaChange(item.id)}
+                  type="button"
+                  title={item.name}
+                >
+                  <span>{index + 1}</span>
+                  <strong>{item.name}</strong>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {activeItem && activePlacement && (
+            <div className="layout-canvas__controls">
+              <NumberField label="X" value={activePlacement.x} min={0} max={LAYOUT_WIDTH} step={10} onChange={(value) => onPlacementChange(activeItem.id, "x", value)} />
+              <NumberField label="Y" value={activePlacement.y} min={0} max={LAYOUT_HEIGHT} step={2} onChange={(value) => onPlacementChange(activeItem.id, "y", value)} />
+              <NumberField label="W" value={activePlacement.width} min={20} max={LAYOUT_WIDTH} step={10} onChange={(value) => onPlacementChange(activeItem.id, "width", value)} />
+              <NumberField label="H" value={activePlacement.height} min={20} max={LAYOUT_HEIGHT} step={2} onChange={(value) => onPlacementChange(activeItem.id, "height", value)} />
+              <button className="layout-canvas__reset-button" onClick={onPlacementReset} type="button">
+                <Maximize2 size={14} />
+                <span>Reset</span>
+              </button>
+            </div>
+          )}
         </>
       )}
     </section>
   );
+}
+
+function mediaBoxStyle(placement) {
+  return {
+    "--media-x": `${(placement.x / LAYOUT_WIDTH) * 100}%`,
+    "--media-y": `${(placement.y / LAYOUT_HEIGHT) * 100}%`,
+    "--media-width": `${(placement.width / LAYOUT_WIDTH) * 100}%`,
+    "--media-height": `${(placement.height / LAYOUT_HEIGHT) * 100}%`,
+  };
 }
 
 function NumberField({ label, value, min, max, step, onChange }) {
@@ -134,7 +169,7 @@ function PreviewCompositeCanvas({ source }) {
   );
 }
 
-function beginPlacementDrag(event, mode, preview, placement, onPlacementChange) {
+function beginPlacementDrag(event, mode, id, preview, placement, onPlacementChange) {
   if (!preview) return;
   event.preventDefault();
   event.stopPropagation();
@@ -152,13 +187,13 @@ function beginPlacementDrag(event, mode, preview, placement, onPlacementChange) 
     const dy = ((nextEvent.clientY - start.clientY) / box.height) * LAYOUT_HEIGHT;
 
     if (mode === "resize") {
-      onPlacementChange("width", start.placement.width + dx);
-      onPlacementChange("height", start.placement.height + dy);
+      onPlacementChange(id, "width", start.placement.width + dx);
+      onPlacementChange(id, "height", start.placement.height + dy);
       return;
     }
 
-    onPlacementChange("x", start.placement.x + dx);
-    onPlacementChange("y", start.placement.y + dy);
+    onPlacementChange(id, "x", start.placement.x + dx);
+    onPlacementChange(id, "y", start.placement.y + dy);
   };
 
   const end = () => {

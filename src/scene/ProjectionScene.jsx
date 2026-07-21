@@ -14,7 +14,7 @@ import { FilmPass } from "three/examples/jsm/postprocessing/FilmPass.js";
 import { GTAOPass } from "three/examples/jsm/postprocessing/GTAOPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
-import testPatternUrl from "../../test-pattern.png";
+import fallbackTextureUrl from "../assets/images/fallback.png";
 import { animationClipId } from "../data/projection.js";
 import { DemoRoom } from "./DemoRoom.jsx";
 import { UploadedModel } from "./UploadedModel.jsx";
@@ -53,6 +53,7 @@ export function ProjectionScene({
   uv,
   ao,
   reflection,
+  modelLightIntensity,
   mediaTexture,
   modelUrl,
   showDemoRoom,
@@ -68,7 +69,7 @@ export function ProjectionScene({
   const [modelRig, setModelRig] = useState(null);
   const [modelFocus, setModelFocus] = useState(DEFAULT_MODEL_FOCUS);
   const [reflectiveFloor, setReflectiveFloor] = useState(DEFAULT_REFLECTIVE_FLOOR);
-  const fallbackTexture = useTexture(testPatternUrl);
+  const fallbackTexture = useTexture(fallbackTextureUrl);
   fallbackTexture.colorSpace = THREE.SRGBColorSpace;
   fallbackTexture.wrapS = THREE.RepeatWrapping;
   fallbackTexture.wrapT = THREE.RepeatWrapping;
@@ -113,6 +114,7 @@ export function ProjectionScene({
             mode={mode}
             uv={uv}
             ao={ao}
+            modelLightIntensity={modelLightIntensity}
             texture={mediaTexture || fallbackTexture}
             showFurniture={showFurniture}
             showPlants={showPlants}

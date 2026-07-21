@@ -1,28 +1,45 @@
 import { useEffect, useRef, useState } from "react";
 
-export function useObjectUrl() {
-  const [fileState, setFileState] = useState({ name: "", type: "", url: "" });
-  const objectUrlRef = useRef("");
+export const MAX_MEDIA_FILES = 4;
+
+export function useObjectUrls() {
+  const [files, setFilesState] = useState([]);
+  const objectUrlsRef = useRef(new Map());
 
   useEffect(() => {
     return () => {
-      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      objectUrlsRef.current.clear();
     };
   }, []);
 
-  const setFile = (file) => {
-    if (!file) return;
-    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
-    const url = URL.createObjectURL(file);
-    objectUrlRef.current = url;
-    setFileState({ name: file.name, type: file.type, url });
+  const setFiles = (nextFiles) => {
+    objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    objectUrlsRef.current.clear();
+
+    const records = nextFiles.slice(0, MAX_MEDIA_FILES).map((file, index) => {
+      const id = `${Date.now()}-${index}-${file.name}`;
+      const url = URL.createObjectURL(file);
+      objectUrlsRef.current.set(id, url);
+      return { id, name: file.name, type: file.type, url };
+    });
+
+    setFilesState(records);
+    return records;
   };
 
-  const clearFile = () => {
-    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
-    objectUrlRef.current = "";
-    setFileState({ name: "", type: "", url: "" });
+  const clearFile = (id) => {
+    const url = objectUrlsRef.current.get(id);
+    if (url) URL.revokeObjectURL(url);
+    objectUrlsRef.current.delete(id);
+    setFilesState((current) => current.filter((file) => file.id !== id));
   };
 
-  return { ...fileState, setFile, clearFile };
+  const clearFiles = () => {
+    objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    objectUrlsRef.current.clear();
+    setFilesState([]);
+  };
+
+  return { files, setFiles, clearFile, clearFiles };
 }

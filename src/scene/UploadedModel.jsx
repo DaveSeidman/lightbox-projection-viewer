@@ -20,6 +20,7 @@ export function UploadedModel({
   mode,
   uv,
   ao,
+  modelLightIntensity,
   texture,
   showFurniture,
   showPlants,
@@ -53,6 +54,21 @@ export function UploadedModel({
       sheetrockNormalMap.dispose();
     };
   }, [sheetrockNormalMap]);
+
+  useEffect(() => {
+    const intensity = THREE.MathUtils.clamp(modelLightIntensity ?? 1, 0, 6);
+
+    scene.traverse((object) => {
+      if (!object.isLight) return;
+
+      if (!Number.isFinite(object.userData.originalIntensity)) {
+        object.userData.originalIntensity = object.intensity;
+      }
+
+      object.intensity = object.userData.originalIntensity * intensity;
+      object.visible = intensity > 0.001;
+    });
+  }, [modelLightIntensity, scene]);
 
   useEffect(() => {
     let meshCount = 0;

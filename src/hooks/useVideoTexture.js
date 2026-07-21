@@ -1,66 +1,85 @@
 import { useEffect, useState } from "react";
 import * as THREE from "three";
 
-export function useMediaTexture(source, type) {
-  const [state, setState] = useState({ videoElement: null, mediaElement: null, mediaTexture: null });
+export function useMediaTextures(files) {
+  const [mediaItems, setMediaItems] = useState([]);
 
   useEffect(() => {
-    if (!source) {
-      setState({ videoElement: null, mediaElement: null, mediaTexture: null });
+    if (!files.length) {
+      setMediaItems([]);
       return undefined;
     }
 
-    if (type?.startsWith("image/")) {
-      let active = true;
-      const image = new Image();
-      const texture = new THREE.Texture(image);
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.minFilter = THREE.LinearFilter;
-      texture.magFilter = THREE.LinearFilter;
-      texture.wrapS = THREE.RepeatWrapping;
-      texture.wrapT = THREE.RepeatWrapping;
+    let active = true;
+    const cleanup = [];
+    const items = files.map((file) => {
+      if (file.type?.startsWith("image/")) {
+        const image = new Image();
+        const texture = configureTexture(new THREE.Texture(image));
 
-      image.onload = () => {
-        if (!active) return;
-        texture.needsUpdate = true;
-        setState({ videoElement: null, mediaElement: image, mediaTexture: texture });
-      };
-      image.crossOrigin = "anonymous";
-      image.src = source;
+        image.onload = () => {
+          if (!active) return;
+          texture.needsUpdate = true;
+        };
+        image.crossOrigin = "anonymous";
+        image.src = file.url;
 
-      return () => {
-        active = false;
-        image.onload = null;
+        cleanup.push(() => {
+          image.onload = null;
+          texture.dispose();
+        });
+
+        return {
+          ...file,
+          videoElement: null,
+          mediaElement: image,
+          mediaTexture: texture,
+        };
+      }
+
+      const video = document.createElement("video");
+      video.src = file.url;
+      video.loop = true;
+      video.muted = true;
+      video.playsInline = true;
+      video.preload = "auto";
+      video.crossOrigin = "anonymous";
+
+      const texture = configureTexture(new THREE.VideoTexture(video));
+
+      video.load();
+      cleanup.push(() => {
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
         texture.dispose();
+      });
+
+      return {
+        ...file,
+        videoElement: video,
+        mediaElement: video,
+        mediaTexture: texture,
       };
-    }
+    });
 
-    const video = document.createElement("video");
-    video.src = source;
-    video.loop = true;
-    video.muted = true;
-    video.playsInline = true;
-    video.preload = "auto";
-    video.crossOrigin = "anonymous";
-
-    const texture = new THREE.VideoTexture(video);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.minFilter = THREE.LinearFilter;
-    texture.magFilter = THREE.LinearFilter;
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.needsUpdate = true;
-
-    video.load();
-    setState({ videoElement: video, mediaElement: video, mediaTexture: texture });
+    setMediaItems(items);
 
     return () => {
-      video.pause();
-      video.removeAttribute("src");
-      video.load();
-      texture.dispose();
+      active = false;
+      cleanup.forEach((item) => item());
     };
-  }, [source, type]);
+  }, [files]);
 
-  return state;
+  return mediaItems;
+}
+
+function configureTexture(texture) {
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.needsUpdate = true;
+  return texture;
 }
