@@ -18,6 +18,7 @@ import { DemoRoom } from "./DemoRoom.jsx";
 import { UploadedModel } from "./UploadedModel.jsx";
 
 const DEFAULT_MODEL_FOCUS = { x: 0, y: 1.45, z: 0 };
+const ORBIT_FOCUS_DURATION = 0.45;
 
 class ProjectionAwareGTAOPass extends GTAOPass {
   _renderOverride(renderer, overrideMaterial, renderTarget, clearColor, clearAlpha) {
@@ -121,6 +122,7 @@ export function ProjectionScene({
       )}
 
       <ReflectiveFloor mode={mode} />
+      <DoubleClickOrbitFocus controls={controls} />
       <ScreenSpaceAmbientOcclusion ao={ao} />
       <OrbitControls
         makeDefault
@@ -166,6 +168,65 @@ function getModelFocus(scene) {
     y: box.min.y + size.y * 0.42,
     z: 0,
   };
+}
+
+function DoubleClickOrbitFocus({ controls }) {
+  const { camera, pointer, raycaster, scene } = useThree();
+  const animation = useRef(null);
+  const start = useMemo(() => new THREE.Vector3(), []);
+  const target = useMemo(() => new THREE.Vector3(), []);
+  const nextTarget = useMemo(() => new THREE.Vector3(), []);
+
+  const handleDoubleClick = useCallback((event) => {
+    if (!controls.current) return;
+
+    raycaster.setFromCamera(pointer, camera);
+    const hit = raycaster.intersectObjects(getFocusableMeshes(scene), true)[0];
+    if (!hit) return;
+
+    event.stopPropagation();
+    start.copy(controls.current.target);
+    target.copy(hit.point);
+    animation.current = {
+      elapsed: 0,
+      start: start.clone(),
+      target: target.clone(),
+    };
+  }, [camera, controls, pointer, raycaster, scene, start, target]);
+
+  useFrame((_, delta) => {
+    const state = animation.current;
+    if (!state || !controls.current) return;
+
+    state.elapsed += delta;
+    const t = Math.min(state.elapsed / ORBIT_FOCUS_DURATION, 1);
+    const eased = 1 - (1 - t) ** 3;
+
+    nextTarget.lerpVectors(state.start, state.target, eased);
+    controls.current.target.copy(nextTarget);
+    controls.current.update();
+
+    if (t >= 1) animation.current = null;
+  });
+
+  return <group onDoubleClick={handleDoubleClick} />;
+}
+
+function getFocusableMeshes(scene) {
+  const meshes = [];
+
+  scene.traverse((object) => {
+    if (object.isMesh && object.visible && object.geometry && isFocusableMaterial(object.material)) {
+      meshes.push(object);
+    }
+  });
+
+  return meshes;
+}
+
+function isFocusableMaterial(material) {
+  const materials = Array.isArray(material) ? material : [material];
+  return materials.some((item) => item && (!item.transparent || item.opacity > 0.01));
 }
 
 function RendererTone({ mode }) {
