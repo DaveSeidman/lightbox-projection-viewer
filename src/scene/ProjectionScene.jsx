@@ -49,6 +49,7 @@ export function ProjectionScene({
   mode,
   uv,
   ao,
+  reflection,
   mediaTexture,
   modelUrl,
   showDemoRoom,
@@ -127,7 +128,7 @@ export function ProjectionScene({
         </Bounds>
       )}
 
-      <ReflectiveFloor mode={mode} floor={reflectiveFloor} />
+      <ReflectiveFloor mode={mode} floor={reflectiveFloor} reflection={reflection} />
       <DoubleClickOrbitFocus controls={controls} />
       <ScreenSpaceAmbientOcclusion ao={ao} />
       <OrbitControls
@@ -538,7 +539,12 @@ function updateControlsTarget(controls, camera, forward) {
   controls.update();
 }
 
-function ReflectiveFloor({ mode, floor }) {
+function ReflectiveFloor({ mode, floor, reflection }) {
+  const blur = THREE.MathUtils.clamp(reflection?.blur ?? 1, 0, 2);
+  const strength = THREE.MathUtils.clamp(reflection?.strength ?? 1, 0, 2);
+  const darkBlur = [780 * blur, 260 * blur];
+  const lightBlur = [260 * blur, 72 * blur];
+
   return (
     <mesh
       receiveShadow
@@ -547,7 +553,7 @@ function ReflectiveFloor({ mode, floor }) {
     >
       <planeGeometry args={floor.size} />
       <MeshReflectorMaterial
-        blur={mode === "light" ? [260, 72] : [780, 260]}
+        blur={mode === "light" ? lightBlur : darkBlur}
         color={mode === "light" ? "#ece9de" : "#080809"}
         depthScale={mode === "light" ? 0.24 : 0.12}
         depthToBlurRatioBias={0.28}
@@ -555,7 +561,7 @@ function ReflectiveFloor({ mode, floor }) {
         minDepthThreshold={mode === "light" ? 0.18 : 0.65}
         mixBlur={1}
         mixContrast={mode === "light" ? 1 : 1.22}
-        mixStrength={mode === "light" ? 0.42 : 6.5}
+        mixStrength={(mode === "light" ? 0.42 : 6.5) * strength}
         metalness={0}
         mirror={mode === "light" ? 0.48 : 0.92}
         reflectorOffset={0.018}

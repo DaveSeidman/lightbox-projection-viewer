@@ -13,11 +13,16 @@ const DEFAULT_AO = {
   distance: 0.39,
   area: 14.4,
 };
+const DEFAULT_REFLECTION = {
+  blur: 1,
+  strength: 1,
+};
 
 function App() {
   const [mode, setMode] = useState("light");
   const [uv, setUv] = useState(DEFAULT_UV);
   const [ao, setAo] = useState(DEFAULT_AO);
+  const [reflection, setReflection] = useState(DEFAULT_REFLECTION);
   const [playback, setPlayback] = useState("idle");
   const [showFurniture, setShowFurniture] = useState(true);
   const [showPlants, setShowPlants] = useState(true);
@@ -65,6 +70,10 @@ function App() {
     setAo((current) => ({ ...current, [key]: Number(value) }));
   };
 
+  const handleReflectionChange = (key, value) => {
+    setReflection((current) => ({ ...current, [key]: Number(value) }));
+  };
+
   const handleCameraPath = (id) => {
     setCameraPath(id ? { id, run: Date.now() } : null);
   };
@@ -95,6 +104,7 @@ function App() {
           mode={mode}
           uv={uv}
           ao={ao}
+          reflection={reflection}
           mediaTexture={mediaTexture}
           modelUrl={DEFAULT_MODEL_URL}
           showDemoRoom={false}
@@ -112,6 +122,7 @@ function App() {
       <ControlPanel
         uv={uv}
         ao={ao}
+        reflection={reflection}
         mode={mode}
         mediaName={mediaFile.name || "Test pattern"}
         playback={playback}
@@ -131,6 +142,8 @@ function App() {
         onUvReset={() => setUv(DEFAULT_UV)}
         onAoChange={handleAoChange}
         onAoReset={() => setAo(DEFAULT_AO)}
+        onReflectionChange={handleReflectionChange}
+        onReflectionReset={() => setReflection(DEFAULT_REFLECTION)}
         onShowFurnitureChange={setShowFurniture}
         onShowPlantsChange={setShowPlants}
         onPresetChange={setPreset}

@@ -5,6 +5,7 @@ import {
   Flower2,
   Play,
   Pause,
+  Waves,
   RotateCcw,
   Sofa,
   Upload,
@@ -16,6 +17,7 @@ import { Slider } from "./Slider.jsx";
 export function ControlPanel({
   uv,
   ao,
+  reflection,
   mode,
   mediaName,
   playback,
@@ -35,6 +37,8 @@ export function ControlPanel({
   onUvReset,
   onAoChange,
   onAoReset,
+  onReflectionChange,
+  onReflectionReset,
   onShowFurnitureChange,
   onShowPlantsChange,
   onPresetChange,
@@ -116,6 +120,18 @@ export function ControlPanel({
             <Slider label="Blur" value={ao.blur} min={0} max={0.22} step={0.01} onChange={(value) => onAoChange("blur", value)} />
             <Slider label="Distance" value={ao.distance} min={0.05} max={0.73} step={0.01} onChange={(value) => onAoChange("distance", value)} />
             <Slider label="Area" value={ao.area} min={4} max={24.8} step={0.1} onChange={(value) => onAoChange("area", value)} />
+          </section>
+
+          <section className="projection-controls__section">
+            <div className="projection-controls__section-title">
+              <Waves size={16} />
+              <span>Reflection</span>
+              <button className="projection-controls__ghost-button" onClick={onReflectionReset} type="button">
+                Reset
+              </button>
+            </div>
+            <Slider label="Blur" value={reflection.blur} min={0} max={2} step={0.01} onChange={(value) => onReflectionChange("blur", value)} />
+            <Slider label="Strength" value={reflection.strength} min={0} max={2} step={0.01} onChange={(value) => onReflectionChange("strength", value)} />
           </section>
 
           <section className="projection-controls__section">
