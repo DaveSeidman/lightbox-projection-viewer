@@ -114,7 +114,6 @@ export function UploadedModel({
 
     return () => {
       generatedMaterials.forEach((material) => {
-        material.map?.dispose();
         material.dispose();
       });
     };
@@ -295,10 +294,10 @@ function writeBoxUvForVertex(uv, index, position, normal) {
 }
 
 function createProjectionMaterial({ texture, uv, mode }) {
-  const projectedTexture = texture.clone();
+  const projectedTexture = texture;
   projectedTexture.flipY = false;
-  projectedTexture.wrapS = THREE.RepeatWrapping;
-  projectedTexture.wrapT = THREE.RepeatWrapping;
+  projectedTexture.wrapS = THREE.ClampToEdgeWrapping;
+  projectedTexture.wrapT = THREE.ClampToEdgeWrapping;
   projectedTexture.colorSpace = THREE.SRGBColorSpace;
   projectedTexture.center.set(0.5, 0.5);
   projectedTexture.repeat.set(uv.repeatX, uv.repeatY);
