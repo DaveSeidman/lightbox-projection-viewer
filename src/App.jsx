@@ -6,7 +6,7 @@ import { useObjectUrl } from "./hooks/useObjectUrl.js";
 import { useMediaTexture } from "./hooks/useVideoTexture.js";
 import { ProjectionCanvas } from "./scene/ProjectionCanvas.jsx";
 
-const DEFAULT_MODEL_URL = "/240_west_37th_projection.glb";
+const DEFAULT_MODEL_URL = `${import.meta.env.BASE_URL}240_west_37th_projection.glb`;
 const DEFAULT_AO = {
   opacity: 0.09,
   blur: 0.11,
