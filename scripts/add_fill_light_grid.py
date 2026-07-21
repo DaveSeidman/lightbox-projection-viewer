@@ -10,6 +10,9 @@ PUBLIC_GLB_PATH = BASE_DIR / "public" / "240_west_37th_projection.glb"
 DIST_GLB_PATH = BASE_DIR / "dist" / "240_west_37th_projection.glb"
 COLLECTION_NAME = "generated_dim_fill_lights"
 LIGHT_PREFIX = "fill_light_grid_"
+OUTER_LIGHT_NAME = "outer_room_fill_light"
+MAIN_GRID_COLUMNS = 8
+MAIN_GRID_ROWS = 3
 
 
 def main():
@@ -20,31 +23,36 @@ def main():
     floor = find_floor()
     meshes = [obj for obj in bpy.data.objects if obj.type == "MESH"]
     bounds = world_bounds(floor) if floor else combined_bounds(meshes)
-    obstacles = [
-        footprint_bounds(obj, margin=1.35)
-        for obj in meshes
-        if obj != floor and is_wall_like(obj)
-    ]
+    projection = bpy.data.objects.get("projection_walls")
 
     collection = bpy.data.collections.new(COLLECTION_NAME)
     bpy.context.scene.collection.children.link(collection)
 
     ceiling_z = max((world_bounds(obj)[1].z for obj in meshes if is_wall_like(obj)), default=bounds[1].z)
     light_z = min(ceiling_z - 1.2, max(bounds[0].z + 3.2, 11.8))
-    points = open_grid_points(bounds, obstacles, columns=11, rows=5, inset=3.0)
+    points = main_projection_room_grid(projection, light_z)
 
     for index, point in enumerate(points, start=1):
-        light_data = bpy.data.lights.new(f"{LIGHT_PREFIX}{index:02d}", type="POINT")
-        light_data.energy = 1.5
-        light_data.color = (1.0, 0.965, 0.9) if index % 2 else (0.9, 0.94, 1.0)
-        light_data.shadow_soft_size = 8.0
-        light_data.use_shadow = False
-        light_data.use_custom_distance = True
-        light_data.cutoff_distance = 10.0
-        light = bpy.data.objects.new(light_data.name, light_data)
-        light.location = (point.x, point.y, light_z)
-        light["generated_by"] = "scripts/add_fill_light_grid.py"
-        collection.objects.link(light)
+        create_point_light(
+            collection,
+            name=f"{LIGHT_PREFIX}{index:02d}",
+            location=point,
+            energy=0.55,
+            range_distance=7.5,
+            color=(1.0, 0.965, 0.9) if index % 2 else (0.9, 0.94, 1.0),
+            soft_size=5.5,
+        )
+
+    outer_light_location = outer_room_point(bounds, projection, light_z)
+    create_point_light(
+        collection,
+        name=OUTER_LIGHT_NAME,
+        location=outer_light_location,
+        energy=1.0,
+        range_distance=9.0,
+        color=(0.92, 0.95, 1.0),
+        soft_size=7.0,
+    )
 
     bpy.ops.wm.save_as_mainfile(filepath=str(BLEND_PATH))
     export_glb(PUBLIC_GLB_PATH)
@@ -53,13 +61,21 @@ def main():
     print(f"saved {BLEND_PATH}")
     print(f"exported {PUBLIC_GLB_PATH}")
     print(f"exported {DIST_GLB_PATH}")
-    print(f"added {len(points)} dim fill lights at z={light_z:.2f}")
+    print(f"added {len(points)} main-space lights and 1 outer-space light at z={light_z:.2f}")
 
 
 def remove_previous_lights():
     for obj in list(bpy.data.objects):
-        if obj.type == "LIGHT" and (obj.name.startswith(LIGHT_PREFIX) or obj.get("generated_by") == "scripts/add_fill_light_grid.py"):
+        if obj.type == "LIGHT" and (
+            obj.name.startswith(LIGHT_PREFIX)
+            or obj.name.startswith(OUTER_LIGHT_NAME)
+            or obj.get("generated_by") == "scripts/add_fill_light_grid.py"
+        ):
             bpy.data.objects.remove(obj, do_unlink=True)
+
+    for light in list(bpy.data.lights):
+        if light.name.startswith(LIGHT_PREFIX) or light.name.startswith(OUTER_LIGHT_NAME):
+            bpy.data.lights.remove(light)
 
     collection = bpy.data.collections.get(COLLECTION_NAME)
     if collection:
@@ -114,37 +130,53 @@ def combined_bounds(objects):
     return min_corner, max_corner
 
 
-def footprint_bounds(obj, margin):
-    min_corner, max_corner = world_bounds(obj)
-    return (
-        min_corner.x - margin,
-        max_corner.x + margin,
-        min_corner.y - margin,
-        max_corner.y + margin,
-    )
+def main_projection_room_grid(projection, z):
+    if projection:
+        min_corner, max_corner = world_bounds(projection)
+        x_min = min_corner.x + 3.2
+        x_max = max_corner.x - 3.2
+        y_min = min_corner.y + 3.0
+        y_max = max_corner.y - 3.0
+    else:
+        x_min, x_max = -19.5, 18.5
+        y_min, y_max = -8.5, 8.5
 
-
-def open_grid_points(bounds, obstacles, columns, rows, inset):
-    min_corner, max_corner = bounds
-    x_min = min_corner.x + inset
-    x_max = max_corner.x - inset
-    y_min = min_corner.y + inset
-    y_max = max_corner.y - inset
     points = []
 
-    for row in range(rows):
-        y = y_min + (y_max - y_min) * row / max(rows - 1, 1)
-        for column in range(columns):
-            x = x_min + (x_max - x_min) * column / max(columns - 1, 1)
-            if inside_any_obstacle(x, y, obstacles):
-                continue
-            points.append(Vector((x, y, 0)))
+    for row in range(MAIN_GRID_ROWS):
+        y = y_min + (y_max - y_min) * row / max(MAIN_GRID_ROWS - 1, 1)
+        for column in range(MAIN_GRID_COLUMNS):
+            x = x_min + (x_max - x_min) * column / max(MAIN_GRID_COLUMNS - 1, 1)
+            points.append(Vector((x, y, z)))
 
     return points
 
 
-def inside_any_obstacle(x, y, obstacles):
-    return any(x_min <= x <= x_max and y_min <= y <= y_max for x_min, x_max, y_min, y_max in obstacles)
+def outer_room_point(bounds, projection, z):
+    min_corner, max_corner = bounds
+    if projection:
+        projection_min, projection_max = world_bounds(projection)
+        x = projection_max.x + (max_corner.x - projection_max.x) * 0.55
+    else:
+        x = max_corner.x - 8.0
+
+    y = (min_corner.y + max_corner.y) * 0.5
+    return Vector((x, y, z))
+
+
+def create_point_light(collection, name, location, energy, range_distance, color, soft_size):
+    light_data = bpy.data.lights.new(name, type="POINT")
+    light_data.energy = energy
+    light_data.color = color
+    light_data.shadow_soft_size = soft_size
+    light_data.use_shadow = False
+    light_data.use_custom_distance = True
+    light_data.cutoff_distance = range_distance
+    light = bpy.data.objects.new(light_data.name, light_data)
+    light.location = location
+    light["generated_by"] = "scripts/add_fill_light_grid.py"
+    collection.objects.link(light)
+    return light
 
 
 def export_glb(path):
