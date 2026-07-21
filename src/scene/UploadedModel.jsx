@@ -9,9 +9,11 @@ import {
   PLANT_NAME_PATTERN,
   PROJECTION_NAME_PATTERN,
 } from "../data/projection.js";
+import { LAYOUT_HEIGHT, LAYOUT_WIDTH } from "../hooks/useLayoutTexture.js";
 
 const SHEETROCK_UV_REPEATS_PER_UNIT = 18;
 const FLOOR_NAME_PATTERN = /^floor$/i;
+const PROJECTION_UV_ASPECT = LAYOUT_WIDTH / LAYOUT_HEIGHT;
 
 export function UploadedModel({
   url,
@@ -299,9 +301,9 @@ function createProjectionMaterial({ texture, uv, mode }) {
   projectedTexture.wrapS = THREE.ClampToEdgeWrapping;
   projectedTexture.wrapT = THREE.ClampToEdgeWrapping;
   projectedTexture.colorSpace = THREE.SRGBColorSpace;
-  projectedTexture.center.set(0.5, 0.5);
-  projectedTexture.repeat.set(uv.repeatX, uv.repeatY);
-  projectedTexture.offset.set(uv.offsetX, uv.offsetY);
+  projectedTexture.center.set(0, 0.5);
+  projectedTexture.repeat.set(uv.repeatX / PROJECTION_UV_ASPECT, uv.repeatY);
+  projectedTexture.offset.set(uv.offsetX / PROJECTION_UV_ASPECT, uv.offsetY);
   projectedTexture.rotation = THREE.MathUtils.degToRad(uv.rotation);
   projectedTexture.needsUpdate = true;
 
