@@ -11,6 +11,7 @@ import {
 } from "../data/projection.js";
 
 const SHEETROCK_UV_REPEATS_PER_UNIT = 18;
+const FLOOR_NAME_PATTERN = /^floor$/i;
 
 export function UploadedModel({
   url,
@@ -67,13 +68,14 @@ export function UploadedModel({
       const name = object.name || "";
       const isProjection =
         PROJECTION_NAME_PATTERN.test(name) || (scene.children.length <= 4 && meshCount <= 4);
+      const isFloor = FLOOR_NAME_PATTERN.test(name);
       const isFurniture = FURNITURE_NAME_PATTERN.test(name);
       const isPlant = PLANT_NAME_PATTERN.test(name);
 
       if (isFurniture) furnitureLike += 1;
       if (isPlant) plantLike += 1;
 
-      object.visible = (!isFurniture || showFurniture) && (!isPlant || showPlants);
+      object.visible = !isFloor && (!isFurniture || showFurniture) && (!isPlant || showPlants);
 
       if (!object.userData.originalMaterial) {
         object.userData.originalMaterial = object.material;
@@ -308,7 +310,7 @@ function createProjectionMaterial({ texture, uv, mode }) {
     map: projectedTexture,
     emissiveMap: projectedTexture,
     emissive: new THREE.Color("#ffffff"),
-    emissiveIntensity: mode === "dark" ? 3.2 * uv.brightness : 0.32 * uv.brightness,
+    emissiveIntensity: mode === "dark" ? 4 * uv.brightness : 0.32 * uv.brightness,
     roughness: 0.7,
     metalness: 0,
     envMapIntensity: mode === "dark" ? 0.02 : 0.18,

@@ -13,11 +13,15 @@ import { GTAOPass } from "three/examples/jsm/postprocessing/GTAOPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import testPatternUrl from "../../test-pattern.png";
-import { animationClipId } from "../data/projection.js";
+import { animationClipId, PROJECTION_NAME_PATTERN } from "../data/projection.js";
 import { DemoRoom } from "./DemoRoom.jsx";
 import { UploadedModel } from "./UploadedModel.jsx";
 
 const DEFAULT_MODEL_FOCUS = { x: 0, y: 1.45, z: 0 };
+const DEFAULT_REFLECTIVE_FLOOR = {
+  position: [0, 0.096, 0],
+  size: [11.5, 4.8],
+};
 const ORBIT_FOCUS_DURATION = 0.45;
 
 class ProjectionAwareGTAOPass extends GTAOPass {
@@ -59,6 +63,8 @@ export function ProjectionScene({
   const controls = useRef(null);
   const [modelRig, setModelRig] = useState(null);
   const [modelFocus, setModelFocus] = useState(DEFAULT_MODEL_FOCUS);
+  const [reflectiveFloor, setReflectiveFloor] = useState(DEFAULT_REFLECTIVE_FLOOR);
+  const [floorReflectionPatches, setFloorReflectionPatches] = useState([]);
   const fallbackTexture = useTexture(testPatternUrl);
   fallbackTexture.colorSpace = THREE.SRGBColorSpace;
   fallbackTexture.wrapS = THREE.RepeatWrapping;
@@ -67,6 +73,8 @@ export function ProjectionScene({
   const handleModelReady = useCallback((rig) => {
     setModelRig(rig);
     setModelFocus(rig?.scene ? getModelFocus(rig.scene) : DEFAULT_MODEL_FOCUS);
+    setReflectiveFloor(rig?.scene ? getReflectiveFloor(rig.scene) : DEFAULT_REFLECTIVE_FLOOR);
+    setFloorReflectionPatches(rig?.scene ? getProjectionReflectionPatches(rig.scene) : []);
   }, []);
 
   useEffect(() => {
@@ -121,7 +129,14 @@ export function ProjectionScene({
         </Bounds>
       )}
 
-      <ReflectiveFloor mode={mode} />
+      <ReflectiveFloor mode={mode} floor={reflectiveFloor} />
+      <ProjectionFloorReflections
+        mode={mode}
+        patches={floorReflectionPatches}
+        floor={reflectiveFloor}
+        texture={mediaTexture || fallbackTexture}
+        uv={uv}
+      />
       <DoubleClickOrbitFocus controls={controls} />
       <ScreenSpaceAmbientOcclusion ao={ao} />
       <OrbitControls
@@ -168,6 +183,63 @@ function getModelFocus(scene) {
     y: box.min.y + size.y * 0.42,
     z: 0,
   };
+}
+
+function getReflectiveFloor(scene) {
+  const floor = scene.getObjectByName("floor");
+  if (!floor) return DEFAULT_REFLECTIVE_FLOOR;
+
+  scene.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(floor);
+  const size = new THREE.Vector3();
+  const center = new THREE.Vector3();
+  box.getSize(size);
+  box.getCenter(center);
+
+  if (box.isEmpty() || !Number.isFinite(size.x + size.y + size.z)) {
+    return DEFAULT_REFLECTIVE_FLOOR;
+  }
+
+  return {
+    position: [center.x, box.max.y + 0.006, center.z],
+    size: [Math.max(size.x, 0.1), Math.max(size.z, 0.1)],
+  };
+}
+
+function getProjectionReflectionPatches(scene) {
+  const floor = getReflectiveFloor(scene);
+  const floorY = floor.position[1] + 0.008;
+  const patches = [];
+
+  scene.updateMatrixWorld(true);
+  scene.traverse((object) => {
+    if (!object.isMesh || !PROJECTION_NAME_PATTERN.test(object.name || "")) return;
+
+    const box = new THREE.Box3().setFromObject(object);
+    const size = new THREE.Vector3();
+    const center = new THREE.Vector3();
+    box.getSize(size);
+    box.getCenter(center);
+
+    if (box.isEmpty() || !Number.isFinite(size.x + size.y + size.z)) return;
+
+    const longAlongX = size.x >= size.z;
+    const reflectionDepth = THREE.MathUtils.clamp(size.y * 0.55, 1, 2.4);
+    const wallSign = longAlongX ? Math.sign(center.z || 1) : Math.sign(center.x || 1);
+    const inwardOffset = reflectionDepth * 0.5 * -wallSign;
+
+    patches.push({
+      key: object.uuid,
+      position: longAlongX
+        ? [center.x, floorY, center.z + inwardOffset]
+        : [center.x + inwardOffset, floorY, center.z],
+      size: longAlongX
+        ? [Math.max(size.x, 0.1), reflectionDepth]
+        : [reflectionDepth, Math.max(size.z, 0.1)],
+    });
+  });
+
+  return patches;
 }
 
 function DoubleClickOrbitFocus({ controls }) {
@@ -511,26 +583,96 @@ function updateControlsTarget(controls, camera, forward) {
   controls.update();
 }
 
-function ReflectiveFloor({ mode }) {
+function ProjectionFloorReflections({ mode, patches, floor, texture, uv }) {
+  const reflectionTexture = useMemo(() => {
+    const nextTexture = texture.clone();
+    nextTexture.flipY = false;
+    nextTexture.wrapS = THREE.RepeatWrapping;
+    nextTexture.wrapT = THREE.RepeatWrapping;
+    nextTexture.colorSpace = THREE.SRGBColorSpace;
+    nextTexture.center.set(0.5, 0.5);
+    nextTexture.repeat.set(uv.repeatX, uv.repeatY);
+    nextTexture.offset.set(uv.offsetX, uv.offsetY);
+    nextTexture.rotation = THREE.MathUtils.degToRad(uv.rotation);
+    nextTexture.minFilter = THREE.LinearMipmapLinearFilter;
+    nextTexture.magFilter = THREE.LinearFilter;
+    nextTexture.needsUpdate = true;
+    return nextTexture;
+  }, [texture, uv]);
+
+  useEffect(() => {
+    return () => {
+      reflectionTexture.dispose();
+    };
+  }, [reflectionTexture]);
+
+  if (mode !== "dark") return null;
+
+  return (
+    <group>
+      <mesh
+        position={[floor.position[0], floor.position[1] + 0.012, floor.position[2]]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        renderOrder={1}
+        userData={{ excludeFromScreenSpaceAo: true }}
+      >
+        <planeGeometry args={floor.size} />
+        <meshBasicMaterial
+          map={reflectionTexture}
+          transparent
+          opacity={0.16}
+          blending={THREE.AdditiveBlending}
+          depthTest={false}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+          toneMapped={false}
+        />
+      </mesh>
+      {patches.map((patch) => (
+        <mesh
+          key={patch.key}
+          position={patch.position}
+          rotation={[-Math.PI / 2, 0, 0]}
+          renderOrder={1}
+          userData={{ excludeFromScreenSpaceAo: true }}
+        >
+          <planeGeometry args={patch.size} />
+          <meshBasicMaterial
+            map={reflectionTexture}
+            transparent
+            opacity={0.68}
+            blending={THREE.AdditiveBlending}
+            depthTest={false}
+            depthWrite={false}
+            side={THREE.DoubleSide}
+            toneMapped={false}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+function ReflectiveFloor({ mode, floor }) {
   return (
     <mesh
       receiveShadow
       rotation={[-Math.PI / 2, 0, 0]}
-      position={[0, 0.096, 0]}
+      position={floor.position}
     >
-      <planeGeometry args={[11.5, 4.8]} />
+      <planeGeometry args={floor.size} />
       <MeshReflectorMaterial
-        blur={[190, 52]}
-        color={mode === "light" ? "#ece9de" : "#070708"}
-        depthScale={mode === "light" ? 0.24 : 0.62}
+        blur={[150, 38]}
+        color={mode === "light" ? "#ece9de" : "#19191b"}
+        depthScale={mode === "light" ? 0.24 : 0.78}
         maxDepthThreshold={1.4}
         minDepthThreshold={0.18}
         mixBlur={1}
-        mixStrength={mode === "light" ? 0.42 : 1.45}
+        mixStrength={mode === "light" ? 0.42 : 2.6}
         metalness={0}
-        mirror={mode === "light" ? 0.48 : 0.96}
+        mirror={mode === "light" ? 0.48 : 1}
         resolution={1024}
-        roughness={0.34}
+        roughness={0.22}
       />
     </mesh>
   );
