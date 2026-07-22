@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { ControlPanel } from "./components/ControlPanel.jsx";
+import { ControlPanel, DevPanel } from "./components/ControlPanel.jsx";
 import { DEFAULT_OUTLINE_URL, LayoutCanvas } from "./components/LayoutCanvas.jsx";
 import { TopBar } from "./components/TopBar.jsx";
 import { DEFAULT_UV } from "./data/projection.js";
@@ -20,6 +20,12 @@ const DEFAULT_REFLECTION = {
   strength: 1,
 };
 const DEFAULT_MODEL_LIGHT_INTENSITY = 1;
+const DEFAULT_DOF = {
+  focus: 5,
+  aperture: 0.00038,
+  maxblur: 0.0048,
+  noise: 0.035,
+};
 const DEFAULT_LAYOUT_PLACEMENT = {
   x: 0,
   y: 0,
@@ -33,11 +39,13 @@ function App() {
   const [ao, setAo] = useState(DEFAULT_AO);
   const [reflection, setReflection] = useState(DEFAULT_REFLECTION);
   const [modelLightIntensity, setModelLightIntensity] = useState(DEFAULT_MODEL_LIGHT_INTENSITY);
+  const [dof, setDof] = useState(DEFAULT_DOF);
   const [playback, setPlayback] = useState("idle");
   const [showFurniture, setShowFurniture] = useState(true);
   const [showPlants, setShowPlants] = useState(true);
   const [preset, setPreset] = useState("lounge");
   const [panelOpen, setPanelOpen] = useState(true);
+  const [devPanelOpen, setDevPanelOpen] = useState(false);
   const [layoutOpen, setLayoutOpen] = useState(true);
   const [layoutPlacements, setLayoutPlacements] = useState({});
   const [activeMediaId, setActiveMediaId] = useState("");
@@ -125,6 +133,10 @@ function App() {
     setReflection((current) => ({ ...current, [key]: Number(value) }));
   };
 
+  const handleDofChange = (key, value) => {
+    setDof((current) => ({ ...current, [key]: Number(value) }));
+  };
+
   const handleLayoutPlacementChange = (id, key, value) => {
     setLayoutPlacements((current) => ({
       ...current,
@@ -157,7 +169,7 @@ function App() {
 
   return (
     <main
-      className={`projection-app projection-app--${mode}`}
+      className={`projection-app projection-app--${mode}${layoutOpen ? " projection-app--layout-open" : " projection-app--layout-collapsed"}`}
       data-testid="projection-app"
     >
       <div className="projection-app__scene" data-testid="canvas-host">
@@ -166,6 +178,7 @@ function App() {
           uv={uv}
           ao={ao}
           reflection={reflection}
+          dof={dof}
           modelLightIntensity={modelLightIntensity}
           mediaTexture={mediaItems.length ? layoutTexture : null}
           modelUrl={DEFAULT_MODEL_URL}
@@ -199,10 +212,7 @@ function App() {
       />
 
       <ControlPanel
-        uv={uv}
-        ao={ao}
         reflection={reflection}
-        modelLightIntensity={modelLightIntensity}
         mode={mode}
         mediaName={mediaFiles.files.length ? `${mediaFiles.files.length} media file${mediaFiles.files.length === 1 ? "" : "s"}` : "Fallback"}
         playback={playback}
@@ -218,20 +228,30 @@ function App() {
         onClearMedia={handleClearMedia}
         onPanelToggle={() => setPanelOpen((value) => !value)}
         onPlaybackToggle={handlePlaybackToggle}
-        onUvChange={handleUvChange}
-        onUvReset={() => setUv(DEFAULT_UV)}
-        onAoChange={handleAoChange}
-        onAoReset={() => setAo(DEFAULT_AO)}
         onReflectionChange={handleReflectionChange}
         onReflectionReset={() => setReflection(DEFAULT_REFLECTION)}
-        onModelLightIntensityChange={(value) => setModelLightIntensity(Number(value))}
-        onModelLightIntensityReset={() => setModelLightIntensity(DEFAULT_MODEL_LIGHT_INTENSITY)}
         onShowFurnitureChange={setShowFurniture}
         onShowPlantsChange={setShowPlants}
         onPresetChange={setPreset}
         onCameraPath={handleCameraPath}
         onCameraCycle={handleCameraCycle}
         onCameraStop={() => setCameraPath(null)}
+      />
+      <DevPanel
+        ao={ao}
+        dof={dof}
+        modelLightIntensity={modelLightIntensity}
+        open={devPanelOpen}
+        uv={uv}
+        onAoChange={handleAoChange}
+        onAoReset={() => setAo(DEFAULT_AO)}
+        onDofChange={handleDofChange}
+        onDofReset={() => setDof(DEFAULT_DOF)}
+        onModelLightIntensityChange={(value) => setModelLightIntensity(Number(value))}
+        onModelLightIntensityReset={() => setModelLightIntensity(DEFAULT_MODEL_LIGHT_INTENSITY)}
+        onPanelToggle={() => setDevPanelOpen((value) => !value)}
+        onUvChange={handleUvChange}
+        onUvReset={() => setUv(DEFAULT_UV)}
       />
     </main>
   );

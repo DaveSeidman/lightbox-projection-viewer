@@ -53,6 +53,7 @@ export function ProjectionScene({
   uv,
   ao,
   reflection,
+  dof,
   modelLightIntensity,
   mediaTexture,
   modelUrl,
@@ -97,9 +98,9 @@ export function ProjectionScene({
       <RendererTone mode={mode} />
       <StudioEnvironment mode={mode} />
       <CameraRig />
-      <ambientLight intensity={mode === "light" ? 2.35 : 0.16} />
+      <ambientLight intensity={mode === "light" ? 1.82 : 0.16} />
       <hemisphereLight
-        args={[mode === "light" ? "#ffffff" : "#f6f7ff", mode === "light" ? "#f5f2e9" : "#080808", mode === "light" ? 0.95 : 0.1]}
+        args={[mode === "light" ? "#ffffff" : "#f6f7ff", mode === "light" ? "#f5f2e9" : "#080808", mode === "light" ? 0.68 : 0.1]}
       />
 
       {showDemoRoom && (
@@ -134,7 +135,7 @@ export function ProjectionScene({
       )}
 
       <ReflectiveFloor mode={mode} floor={reflectiveFloor} reflection={reflection} onDoubleClick={handleSurfaceDoubleClick} />
-      <ScreenSpaceAmbientOcclusion ao={ao} mode={mode} />
+      <ScreenSpaceAmbientOcclusion ao={ao} dof={dof} mode={mode} />
       <OrbitControls
         makeDefault
         enableDamping
@@ -253,7 +254,7 @@ function RendererTone({ mode }) {
   }, [gl]);
 
   useEffect(() => {
-    gl.toneMappingExposure = mode === "light" ? 1.04 : 1.08;
+    gl.toneMappingExposure = mode === "light" ? 0.92 : 1.08;
   }, [gl, mode]);
 
   return null;
@@ -280,7 +281,7 @@ function StudioEnvironment({ mode }) {
   }, [gl, scene]);
 
   useEffect(() => {
-    scene.environmentIntensity = mode === "light" ? 1.08 : 0.08;
+    scene.environmentIntensity = mode === "light" ? 0.78 : 0.08;
 
     return () => {
       scene.environmentIntensity = previousIntensity.current;
@@ -290,7 +291,7 @@ function StudioEnvironment({ mode }) {
   return null;
 }
 
-function ScreenSpaceAmbientOcclusion({ ao, mode }) {
+function ScreenSpaceAmbientOcclusion({ ao, dof, mode }) {
   const { gl, scene, camera, size } = useThree();
   const focusDistance = useRef(5);
   const { bokehPass, composer, filmPass, gtaoPass, outputPass } = useMemo(() => {
@@ -341,12 +342,13 @@ function ScreenSpaceAmbientOcclusion({ ao, mode }) {
 
   useEffect(() => {
     bokehPass.enabled = true;
-    bokehPass.uniforms.aperture.value = mode === "dark" ? 0.00052 : 0.00034;
-    bokehPass.uniforms.maxblur.value = mode === "dark" ? 0.0065 : 0.0042;
+    bokehPass.uniforms.focus.value = THREE.MathUtils.clamp(dof?.focus ?? 5, 0.8, 12);
+    bokehPass.uniforms.aperture.value = THREE.MathUtils.clamp(dof?.aperture ?? 0.00038, 0, 0.002);
+    bokehPass.uniforms.maxblur.value = THREE.MathUtils.clamp(dof?.maxblur ?? 0.0048, 0, 0.02);
     filmPass.enabled = true;
-    filmPass.uniforms.intensity.value = mode === "dark" ? 0.065 : 0.03;
+    filmPass.uniforms.intensity.value = THREE.MathUtils.clamp(dof?.noise ?? (mode === "dark" ? 0.065 : 0.03), 0, 0.18);
     filmPass.uniforms.grayscale.value = false;
-  }, [bokehPass, filmPass, mode]);
+  }, [bokehPass, dof, filmPass, mode]);
 
   useEffect(() => {
     const opacity = THREE.MathUtils.clamp(ao?.opacity ?? 0, 0, 1);
@@ -389,7 +391,7 @@ function ScreenSpaceAmbientOcclusion({ ao, mode }) {
   }, [bokehPass, composer, filmPass, outputPass, gtaoPass]);
 
   useFrame((_, delta) => {
-    const nextFocusDistance = THREE.MathUtils.clamp(camera.position.distanceTo(POSTPROCESS_FOCUS_TARGET), 0.8, 12);
+    const nextFocusDistance = THREE.MathUtils.clamp(dof?.focus ?? camera.position.distanceTo(POSTPROCESS_FOCUS_TARGET), 0.8, 12);
     focusDistance.current = THREE.MathUtils.damp(focusDistance.current, nextFocusDistance, 4, delta);
     bokehPass.uniforms.focus.value = focusDistance.current;
     composer.render(delta);

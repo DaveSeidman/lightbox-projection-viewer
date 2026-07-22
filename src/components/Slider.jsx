@@ -1,5 +1,6 @@
 function formatValue(value, step, suffix) {
-  return `${Number(value).toFixed(step >= 1 ? 0 : 2)}${suffix}`;
+  const decimals = step >= 1 ? 0 : Math.min(Math.max(Math.ceil(-Math.log10(step)), 2), 5);
+  return `${Number(value).toFixed(decimals)}${suffix}`;
 }
 
 export function Slider({ label, value, min, max, step, onChange, suffix = "" }) {

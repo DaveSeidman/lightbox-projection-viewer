@@ -16,10 +16,7 @@ import { DEFAULT_UV, FURNITURE_PRESETS } from "../data/projection.js";
 import { Slider } from "./Slider.jsx";
 
 export function ControlPanel({
-  uv,
-  ao,
   reflection,
-  modelLightIntensity,
   mode,
   mediaName,
   playback,
@@ -35,14 +32,8 @@ export function ControlPanel({
   onClearMedia,
   onPanelToggle,
   onPlaybackToggle,
-  onUvChange,
-  onUvReset,
-  onAoChange,
-  onAoReset,
   onReflectionChange,
   onReflectionReset,
-  onModelLightIntensityChange,
-  onModelLightIntensityReset,
   onShowFurnitureChange,
   onShowPlantsChange,
   onPresetChange,
@@ -100,35 +91,6 @@ export function ControlPanel({
         <>
           <section className="projection-controls__section">
             <div className="projection-controls__section-title">
-              <RotateCcw size={16} />
-              <span>UV</span>
-              <button className="projection-controls__ghost-button" onClick={onUvReset} type="button">
-                Reset
-              </button>
-            </div>
-            <Slider label="Offset X" value={uv.offsetX} min={-1} max={1} step={0.01} onChange={(value) => onUvChange("offsetX", value)} />
-            <Slider label="Offset Y" value={uv.offsetY} min={-1} max={1} step={0.01} onChange={(value) => onUvChange("offsetY", value)} />
-            <Slider label="Repeat X" value={uv.repeatX} min={0.25} max={4} step={0.01} onChange={(value) => onUvChange("repeatX", value)} />
-            <Slider label="Repeat Y" value={uv.repeatY} min={0.25} max={4} step={0.01} onChange={(value) => onUvChange("repeatY", value)} />
-            <Slider label="Brightness" value={uv.brightness} min={0.25} max={2.5} step={0.01} onChange={(value) => onUvChange("brightness", value)} />
-          </section>
-
-          <section className="projection-controls__section">
-            <div className="projection-controls__section-title">
-              <Circle size={16} />
-              <span>AO</span>
-              <button className="projection-controls__ghost-button" onClick={onAoReset} type="button">
-                Reset
-              </button>
-            </div>
-            <Slider label="Opacity" value={ao.opacity} min={0} max={0.18} step={0.01} onChange={(value) => onAoChange("opacity", value)} />
-            <Slider label="Blur" value={ao.blur} min={0} max={0.22} step={0.01} onChange={(value) => onAoChange("blur", value)} />
-            <Slider label="Distance" value={ao.distance} min={0.05} max={0.73} step={0.01} onChange={(value) => onAoChange("distance", value)} />
-            <Slider label="Area" value={ao.area} min={4} max={24.8} step={0.1} onChange={(value) => onAoChange("area", value)} />
-          </section>
-
-          <section className="projection-controls__section">
-            <div className="projection-controls__section-title">
               <Waves size={16} />
               <span>Reflection</span>
               <button className="projection-controls__ghost-button" onClick={onReflectionReset} type="button">
@@ -137,17 +99,6 @@ export function ControlPanel({
             </div>
             <Slider label="Blur" value={reflection.blur} min={0} max={6} step={0.01} onChange={(value) => onReflectionChange("blur", value)} />
             <Slider label="Strength" value={reflection.strength} min={0} max={2} step={0.01} onChange={(value) => onReflectionChange("strength", value)} />
-          </section>
-
-          <section className="projection-controls__section">
-            <div className="projection-controls__section-title">
-              <Lightbulb size={16} />
-              <span>Model Lights</span>
-              <button className="projection-controls__ghost-button" onClick={onModelLightIntensityReset} type="button">
-                Reset
-              </button>
-            </div>
-            <Slider label="Intensity" value={modelLightIntensity} min={0} max={6} step={0.01} onChange={onModelLightIntensityChange} />
           </section>
 
           <section className="projection-controls__section">
@@ -234,6 +185,101 @@ export function ControlPanel({
             <div className="projection-controls__environment-note">
               {mode === "light" ? "White walls and floor" : "Dark reflective room"}
             </div>
+          </section>
+        </>
+      )}
+
+    </aside>
+  );
+}
+
+export function DevPanel({
+  ao,
+  dof,
+  modelLightIntensity,
+  open,
+  uv,
+  onAoChange,
+  onAoReset,
+  onDofChange,
+  onDofReset,
+  onModelLightIntensityChange,
+  onModelLightIntensityReset,
+  onPanelToggle,
+  onUvChange,
+  onUvReset,
+}) {
+  return (
+    <aside className={`projection-dev-controls${open ? "" : " projection-dev-controls--collapsed"}`} aria-label="Developer controls">
+      <section className="projection-controls__section">
+        <div className="projection-controls__section-title">
+          <RotateCcw size={16} />
+          <span>Dev</span>
+          <button
+            className={`projection-controls__collapse-button${open ? " projection-controls__collapse-button--open" : ""}`}
+            onClick={onPanelToggle}
+            type="button"
+            title={open ? "Collapse dev controls" : "Expand dev controls"}
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </section>
+
+      {open && (
+        <>
+          <section className="projection-controls__section">
+            <div className="projection-controls__section-title">
+              <RotateCcw size={16} />
+              <span>UV</span>
+              <button className="projection-controls__ghost-button" onClick={onUvReset} type="button">
+                Reset
+              </button>
+            </div>
+            <Slider label="Offset X" value={uv.offsetX} min={-1} max={1} step={0.01} onChange={(value) => onUvChange("offsetX", value)} />
+            <Slider label="Offset Y" value={uv.offsetY} min={-1} max={1} step={0.01} onChange={(value) => onUvChange("offsetY", value)} />
+            <Slider label="Repeat X" value={uv.repeatX} min={0.25} max={4} step={0.01} onChange={(value) => onUvChange("repeatX", value)} />
+            <Slider label="Repeat Y" value={uv.repeatY} min={0.25} max={4} step={0.01} onChange={(value) => onUvChange("repeatY", value)} />
+            <Slider label="Brightness" value={uv.brightness} min={0.25} max={2.5} step={0.01} onChange={(value) => onUvChange("brightness", value)} />
+          </section>
+
+          <section className="projection-controls__section">
+            <div className="projection-controls__section-title">
+              <Circle size={16} />
+              <span>AO</span>
+              <button className="projection-controls__ghost-button" onClick={onAoReset} type="button">
+                Reset
+              </button>
+            </div>
+            <Slider label="Opacity" value={ao.opacity} min={0} max={0.18} step={0.01} onChange={(value) => onAoChange("opacity", value)} />
+            <Slider label="Blur" value={ao.blur} min={0} max={0.22} step={0.01} onChange={(value) => onAoChange("blur", value)} />
+            <Slider label="Distance" value={ao.distance} min={0.05} max={0.73} step={0.01} onChange={(value) => onAoChange("distance", value)} />
+            <Slider label="Area" value={ao.area} min={4} max={24.8} step={0.1} onChange={(value) => onAoChange("area", value)} />
+          </section>
+
+          <section className="projection-controls__section">
+            <div className="projection-controls__section-title">
+              <Lightbulb size={16} />
+              <span>Model Lights</span>
+              <button className="projection-controls__ghost-button" onClick={onModelLightIntensityReset} type="button">
+                Reset
+              </button>
+            </div>
+            <Slider label="Intensity" value={modelLightIntensity} min={0} max={6} step={0.01} onChange={onModelLightIntensityChange} />
+          </section>
+
+          <section className="projection-controls__section">
+            <div className="projection-controls__section-title">
+              <Circle size={16} />
+              <span>DOF</span>
+              <button className="projection-controls__ghost-button" onClick={onDofReset} type="button">
+                Reset
+              </button>
+            </div>
+            <Slider label="Focus" value={dof.focus} min={0.8} max={12} step={0.1} onChange={(value) => onDofChange("focus", value)} />
+            <Slider label="Aperture" value={dof.aperture} min={0} max={0.002} step={0.00001} onChange={(value) => onDofChange("aperture", value)} />
+            <Slider label="Blur" value={dof.maxblur} min={0} max={0.02} step={0.0001} onChange={(value) => onDofChange("maxblur", value)} />
+            <Slider label="Noise" value={dof.noise} min={0} max={0.18} step={0.001} onChange={(value) => onDofChange("noise", value)} />
           </section>
         </>
       )}
