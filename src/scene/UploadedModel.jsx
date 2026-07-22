@@ -159,12 +159,12 @@ function normalizeScene(scene) {
 
 function createModelSurfaceMaterial({ mode, originalMaterial, normalMap }) {
   return new THREE.MeshStandardMaterial({
-    color: mode === "light" ? "#aaa79d" : "#d8d8d2",
+    color: mode === "light" ? "#c3c0b6" : "#d8d8d2",
     roughness: mode === "light"
       ? 0.48
       : getOriginalMaterialNumber(originalMaterial, "roughness", 0.74),
     metalness: getOriginalMaterialNumber(originalMaterial, "metalness", 0),
-    envMapIntensity: mode === "light" ? 0.36 : 0.035,
+    envMapIntensity: mode === "light" ? 0.42 : 0.035,
     normalMap,
     normalScale: mode === "light"
       ? new THREE.Vector2(0.07, 0.07)
@@ -325,14 +325,15 @@ function createProjectionMaterial({ texture, uv, mode }) {
 
   return new THREE.MeshStandardMaterial({
     map: projectedTexture,
+    color: mode === "light" ? "#b9b2a5" : "#ffffff",
     emissiveMap: projectedTexture,
     emissive: new THREE.Color("#ffffff"),
-    emissiveIntensity: mode === "dark" ? 4 * uv.brightness : 0.12 * uv.brightness,
+    emissiveIntensity: mode === "dark" ? 4 * uv.brightness : 0.03 * uv.brightness,
     roughness: 0.7,
     metalness: 0,
     envMapIntensity: mode === "dark" ? 0.02 : 0.06,
     side: THREE.DoubleSide,
-    toneMapped: false,
+    toneMapped: mode !== "dark",
     polygonOffset: true,
     polygonOffsetFactor: -4,
     polygonOffsetUnits: -4,

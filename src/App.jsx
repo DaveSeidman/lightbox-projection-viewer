@@ -231,7 +231,6 @@ function App() {
       />
 
       <ControlPanel
-        reflection={reflection}
         mode={mode}
         mediaName={mediaFiles.files.length ? `${mediaFiles.files.length} media file${mediaFiles.files.length === 1 ? "" : "s"}` : "Fallback"}
         playback={playback}
@@ -247,8 +246,6 @@ function App() {
         onClearMedia={handleClearMedia}
         onPanelToggle={() => setPanelOpen((value) => !value)}
         onPlaybackToggle={handlePlaybackToggle}
-        onReflectionChange={handleReflectionChange}
-        onReflectionReset={() => setReflection(DEFAULT_REFLECTION)}
         onShowFurnitureChange={setShowFurniture}
         onShowPlantsChange={setShowPlants}
         onPresetChange={setPreset}
@@ -261,6 +258,7 @@ function App() {
         dof={dof}
         modelLightIntensity={modelLightIntensity}
         open={devPanelOpen}
+        reflection={reflection}
         uv={uv}
         onAoChange={handleAoChange}
         onAoReset={() => setAo(DEFAULT_AO)}
@@ -269,6 +267,8 @@ function App() {
         onModelLightIntensityChange={(value) => setModelLightIntensity(Number(value))}
         onModelLightIntensityReset={() => setModelLightIntensity(DEFAULT_MODEL_LIGHT_INTENSITY)}
         onPanelToggle={() => setDevPanelOpen((value) => !value)}
+        onReflectionChange={handleReflectionChange}
+        onReflectionReset={() => setReflection(DEFAULT_REFLECTION)}
         onUvChange={handleUvChange}
         onUvReset={() => setUv(DEFAULT_UV)}
       />

@@ -6,17 +6,16 @@ import {
   Lightbulb,
   Play,
   Pause,
-  Waves,
   RotateCcw,
   Sofa,
   Upload,
   Video,
+  Waves,
 } from "lucide-react";
 import { DEFAULT_UV, FURNITURE_PRESETS } from "../data/projection.js";
 import { Slider } from "./Slider.jsx";
 
 export function ControlPanel({
-  reflection,
   mode,
   mediaName,
   playback,
@@ -32,8 +31,6 @@ export function ControlPanel({
   onClearMedia,
   onPanelToggle,
   onPlaybackToggle,
-  onReflectionChange,
-  onReflectionReset,
   onShowFurnitureChange,
   onShowPlantsChange,
   onPresetChange,
@@ -89,18 +86,6 @@ export function ControlPanel({
 
       {panelOpen && (
         <>
-          <section className="projection-controls__section">
-            <div className="projection-controls__section-title">
-              <Waves size={16} />
-              <span>Reflection</span>
-              <button className="projection-controls__ghost-button" onClick={onReflectionReset} type="button">
-                Reset
-              </button>
-            </div>
-            <Slider label="Blur" value={reflection.blur} min={0} max={6} step={0.01} onChange={(value) => onReflectionChange("blur", value)} />
-            <Slider label="Strength" value={reflection.strength} min={0} max={2} step={0.01} onChange={(value) => onReflectionChange("strength", value)} />
-          </section>
-
           <section className="projection-controls__section">
             <div className="projection-controls__section-title">
               <Clapperboard size={16} />
@@ -198,6 +183,7 @@ export function DevPanel({
   dof,
   modelLightIntensity,
   open,
+  reflection,
   uv,
   onAoChange,
   onAoReset,
@@ -206,6 +192,8 @@ export function DevPanel({
   onModelLightIntensityChange,
   onModelLightIntensityReset,
   onPanelToggle,
+  onReflectionChange,
+  onReflectionReset,
   onUvChange,
   onUvReset,
 }) {
@@ -266,6 +254,18 @@ export function DevPanel({
               </button>
             </div>
             <Slider label="Intensity" value={modelLightIntensity} min={0} max={6} step={0.01} onChange={onModelLightIntensityChange} />
+          </section>
+
+          <section className="projection-controls__section">
+            <div className="projection-controls__section-title">
+              <Waves size={16} />
+              <span>Reflection</span>
+              <button className="projection-controls__ghost-button" onClick={onReflectionReset} type="button">
+                Reset
+              </button>
+            </div>
+            <Slider label="Blur" value={reflection.blur} min={0} max={6} step={0.01} onChange={(value) => onReflectionChange("blur", value)} />
+            <Slider label="Strength" value={reflection.strength} min={0} max={2} step={0.01} onChange={(value) => onReflectionChange("strength", value)} />
           </section>
 
           <section className="projection-controls__section">

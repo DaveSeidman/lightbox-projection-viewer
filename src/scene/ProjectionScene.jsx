@@ -98,7 +98,7 @@ export function ProjectionScene({
       <RendererTone mode={mode} />
       <StudioEnvironment mode={mode} />
       <CameraRig />
-      <ambientLight intensity={mode === "light" ? 0.82 : 0.16} />
+      <ambientLight intensity={mode === "light" ? 0.96 : 0.16} />
       <hemisphereLight
         args={[mode === "light" ? "#f2f1eb" : "#f6f7ff", mode === "light" ? "#d9d4c5" : "#080808", mode === "light" ? 0.38 : 0.1]}
       />
@@ -254,7 +254,7 @@ function RendererTone({ mode }) {
   }, [gl]);
 
   useEffect(() => {
-    gl.toneMappingExposure = mode === "light" ? 0.62 : 1.08;
+    gl.toneMappingExposure = mode === "light" ? 0.66 : 1.08;
   }, [gl, mode]);
 
   return null;
@@ -281,7 +281,7 @@ function StudioEnvironment({ mode }) {
   }, [gl, scene]);
 
   useEffect(() => {
-    scene.environmentIntensity = mode === "light" ? 0.32 : 0.08;
+    scene.environmentIntensity = mode === "light" ? 0.36 : 0.08;
 
     return () => {
       scene.environmentIntensity = previousIntensity.current;
