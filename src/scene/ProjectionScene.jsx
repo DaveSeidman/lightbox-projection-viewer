@@ -66,6 +66,7 @@ export function ProjectionScene({
   onCameraPathEnd,
 }) {
   const controls = useRef(null);
+  const focusOrbitAtPoint = useOrbitFocusAnimation(controls);
   const [modelRig, setModelRig] = useState(null);
   const [modelFocus, setModelFocus] = useState(DEFAULT_MODEL_FOCUS);
   const [reflectiveFloor, setReflectiveFloor] = useState(DEFAULT_REFLECTIVE_FLOOR);
@@ -79,6 +80,11 @@ export function ProjectionScene({
     setModelFocus(rig?.scene ? getModelFocus(rig.scene) : DEFAULT_MODEL_FOCUS);
     setReflectiveFloor(rig?.scene ? getReflectiveFloor(rig.scene) : DEFAULT_REFLECTIVE_FLOOR);
   }, []);
+
+  const handleSurfaceDoubleClick = useCallback((event) => {
+    event.stopPropagation();
+    focusOrbitAtPoint(event.point);
+  }, [focusOrbitAtPoint]);
 
   useEffect(() => {
     if (!controls.current) return;
@@ -109,24 +115,25 @@ export function ProjectionScene({
 
       {modelUrl && (
         <Bounds fit clip margin={1.4}>
-          <UploadedModel
-            url={modelUrl}
-            mode={mode}
-            uv={uv}
-            ao={ao}
-            modelLightIntensity={modelLightIntensity}
-            texture={mediaTexture || fallbackTexture}
-            showFurniture={showFurniture}
-            showPlants={showPlants}
-            onStats={onModelStats}
-            onReady={handleModelReady}
-            onAnimationClips={onAnimationClips}
-          />
+          <group onDoubleClick={handleSurfaceDoubleClick}>
+            <UploadedModel
+              url={modelUrl}
+              mode={mode}
+              uv={uv}
+              ao={ao}
+              modelLightIntensity={modelLightIntensity}
+              texture={mediaTexture || fallbackTexture}
+              showFurniture={showFurniture}
+              showPlants={showPlants}
+              onStats={onModelStats}
+              onReady={handleModelReady}
+              onAnimationClips={onAnimationClips}
+            />
+          </group>
         </Bounds>
       )}
 
-      <ReflectiveFloor mode={mode} floor={reflectiveFloor} reflection={reflection} />
-      <DoubleClickOrbitFocus controls={controls} />
+      <ReflectiveFloor mode={mode} floor={reflectiveFloor} reflection={reflection} onDoubleClick={handleSurfaceDoubleClick} />
       <ScreenSpaceAmbientOcclusion ao={ao} mode={mode} />
       <OrbitControls
         makeDefault
@@ -195,29 +202,23 @@ function getReflectiveFloor(scene) {
   };
 }
 
-function DoubleClickOrbitFocus({ controls }) {
-  const { camera, pointer, raycaster, scene } = useThree();
+function useOrbitFocusAnimation(controls) {
   const animation = useRef(null);
   const start = useMemo(() => new THREE.Vector3(), []);
   const target = useMemo(() => new THREE.Vector3(), []);
   const nextTarget = useMemo(() => new THREE.Vector3(), []);
 
-  const handleDoubleClick = useCallback((event) => {
+  const focusAtPoint = useCallback((point) => {
     if (!controls.current) return;
 
-    raycaster.setFromCamera(pointer, camera);
-    const hit = raycaster.intersectObjects(getFocusableMeshes(scene), true)[0];
-    if (!hit) return;
-
-    event.stopPropagation();
     start.copy(controls.current.target);
-    target.copy(hit.point);
+    target.copy(point);
     animation.current = {
       elapsed: 0,
       start: start.clone(),
       target: target.clone(),
     };
-  }, [camera, controls, pointer, raycaster, scene, start, target]);
+  }, [controls, start, target]);
 
   useFrame((_, delta) => {
     const state = animation.current;
@@ -234,24 +235,7 @@ function DoubleClickOrbitFocus({ controls }) {
     if (t >= 1) animation.current = null;
   });
 
-  return <group onDoubleClick={handleDoubleClick} />;
-}
-
-function getFocusableMeshes(scene) {
-  const meshes = [];
-
-  scene.traverse((object) => {
-    if (object.isMesh && object.visible && object.geometry && isFocusableMaterial(object.material)) {
-      meshes.push(object);
-    }
-  });
-
-  return meshes;
-}
-
-function isFocusableMaterial(material) {
-  const materials = Array.isArray(material) ? material : [material];
-  return materials.some((item) => item && (!item.transparent || item.opacity > 0.01));
+  return focusAtPoint;
 }
 
 function RendererTone({ mode }) {
@@ -561,7 +545,7 @@ function updateControlsTarget(controls, camera, forward) {
   controls.update();
 }
 
-function ReflectiveFloor({ mode, floor, reflection }) {
+function ReflectiveFloor({ mode, floor, reflection, onDoubleClick }) {
   const blur = THREE.MathUtils.clamp(reflection?.blur ?? 1, 0, 6);
   const strength = THREE.MathUtils.clamp(reflection?.strength ?? 1, 0, 2);
   const darkBlur = [780 * blur, 260 * blur];
@@ -572,6 +556,7 @@ function ReflectiveFloor({ mode, floor, reflection }) {
       receiveShadow
       rotation={[-Math.PI / 2, 0, 0]}
       position={floor.position}
+      onDoubleClick={onDoubleClick}
     >
       <planeGeometry args={floor.size} />
       <MeshReflectorMaterial
