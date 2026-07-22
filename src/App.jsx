@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { ControlPanel } from "./components/ControlPanel.jsx";
 import { DEFAULT_OUTLINE_URL, LayoutCanvas } from "./components/LayoutCanvas.jsx";
 import { TopBar } from "./components/TopBar.jsx";
@@ -43,9 +43,21 @@ function App() {
   const [activeMediaId, setActiveMediaId] = useState("");
   const [cameraPath, setCameraPath] = useState(null);
   const [cameraClips, setCameraClips] = useState([]);
+  const pendingNativeAspectPlacementIds = useRef(new Set());
 
   const mediaFiles = useObjectUrls();
-  const mediaItems = useMediaTextures(mediaFiles.files);
+  const handleMediaMetadata = useCallback((id, metadata) => {
+    if (!pendingNativeAspectPlacementIds.current.has(id)) return;
+    pendingNativeAspectPlacementIds.current.delete(id);
+    setLayoutPlacements((current) => {
+      const existing = current[id] || DEFAULT_LAYOUT_PLACEMENT;
+      return {
+        ...current,
+        [id]: nativeAspectFullHeightPlacement(metadata, existing.x),
+      };
+    });
+  }, []);
+  const mediaItems = useMediaTextures(mediaFiles.files, handleMediaMetadata);
   const videoElements = mediaItems.map((item) => item.videoElement).filter(Boolean);
   const { layoutCanvas, layoutTexture } = useLayoutTexture({
     mediaItems,
@@ -65,7 +77,8 @@ function App() {
     setLayoutPlacements((current) => {
       const nextPlacements = { ...current };
       records.forEach((file, index) => {
-        nextPlacements[file.id] = defaultPlacementForIndex(mediaFiles.files.length + index, total);
+        pendingNativeAspectPlacementIds.current.add(file.id);
+        nextPlacements[file.id] = provisionalFullHeightPlacement(mediaFiles.files.length + index, total);
       });
       return nextPlacements;
     });
@@ -76,6 +89,7 @@ function App() {
 
   const handleClearMedia = () => {
     mediaFiles.clearFiles();
+    pendingNativeAspectPlacementIds.current.clear();
     setLayoutPlacements({});
     setActiveMediaId("");
     setPlayback("idle");
@@ -241,12 +255,25 @@ function clamp(value, min, max) {
   return Math.min(Math.max(Number.isFinite(value) ? value : min, min), max);
 }
 
-function defaultPlacementForIndex(index, total) {
+function provisionalFullHeightPlacement(index, total) {
   const width = LAYOUT_WIDTH / total;
   return normalizeLayoutPlacement({
     x: width * index,
     y: 0,
     width,
+    height: LAYOUT_HEIGHT,
+  });
+}
+
+function nativeAspectFullHeightPlacement(metadata, x) {
+  const aspect = metadata?.naturalWidth && metadata?.naturalHeight
+    ? metadata.naturalWidth / metadata.naturalHeight
+    : 16 / 9;
+
+  return normalizeLayoutPlacement({
+    x,
+    y: 0,
+    width: LAYOUT_HEIGHT * aspect,
     height: LAYOUT_HEIGHT,
   });
 }

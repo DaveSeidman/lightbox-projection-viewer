@@ -562,7 +562,7 @@ function updateControlsTarget(controls, camera, forward) {
 }
 
 function ReflectiveFloor({ mode, floor, reflection }) {
-  const blur = THREE.MathUtils.clamp(reflection?.blur ?? 1, 0, 2);
+  const blur = THREE.MathUtils.clamp(reflection?.blur ?? 1, 0, 6);
   const strength = THREE.MathUtils.clamp(reflection?.strength ?? 1, 0, 2);
   const darkBlur = [780 * blur, 260 * blur];
   const lightBlur = [260 * blur, 72 * blur];

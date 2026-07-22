@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import * as THREE from "three";
 
-export function useMediaTextures(files) {
+export function useMediaTextures(files, onMediaMetadata) {
   const [mediaItems, setMediaItems] = useState([]);
 
   useEffect(() => {
@@ -20,6 +20,10 @@ export function useMediaTextures(files) {
         image.onload = () => {
           if (!active) return;
           texture.needsUpdate = true;
+          onMediaMetadata?.(file.id, {
+            naturalHeight: image.naturalHeight,
+            naturalWidth: image.naturalWidth,
+          });
         };
         image.crossOrigin = "anonymous";
         image.src = file.url;
@@ -44,12 +48,20 @@ export function useMediaTextures(files) {
       video.playsInline = true;
       video.preload = "auto";
       video.crossOrigin = "anonymous";
+      video.onloadedmetadata = () => {
+        if (!active) return;
+        onMediaMetadata?.(file.id, {
+          naturalHeight: video.videoHeight,
+          naturalWidth: video.videoWidth,
+        });
+      };
 
       const texture = configureTexture(new THREE.VideoTexture(video));
 
       video.load();
       cleanup.push(() => {
         video.pause();
+        video.onloadedmetadata = null;
         video.removeAttribute("src");
         video.load();
         texture.dispose();
@@ -69,7 +81,7 @@ export function useMediaTextures(files) {
       active = false;
       cleanup.forEach((item) => item());
     };
-  }, [files]);
+  }, [files, onMediaMetadata]);
 
   return mediaItems;
 }
