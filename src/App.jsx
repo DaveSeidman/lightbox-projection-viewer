@@ -35,7 +35,7 @@ const DEFAULT_LAYOUT_PLACEMENT = {
 
 function App() {
   const [mode, setMode] = useState("light");
-  const [uv, setUv] = useState(DEFAULT_UV);
+  const [uv] = useState(DEFAULT_UV);
   const [ao, setAo] = useState(DEFAULT_AO);
   const [reflection, setReflection] = useState(DEFAULT_REFLECTION);
   const [modelLightIntensity, setModelLightIntensity] = useState(DEFAULT_MODEL_LIGHT_INTENSITY);
@@ -139,10 +139,6 @@ function App() {
     }
   };
 
-  const handleUvChange = (key, value) => {
-    setUv((current) => ({ ...current, [key]: Number(value) }));
-  };
-
   const handleAoChange = (key, value) => {
     setAo((current) => ({ ...current, [key]: Number(value) }));
   };
@@ -224,10 +220,6 @@ function App() {
         onMediaRemove={handleRemoveMedia}
         onPanelToggle={() => setLayoutOpen((value) => !value)}
         onPlacementChange={handleLayoutPlacementChange}
-        onPlacementReset={() => {
-          if (!activeMediaId) return;
-          setLayoutPlacements((current) => ({ ...current, [activeMediaId]: DEFAULT_LAYOUT_PLACEMENT }));
-        }}
       />
 
       <ControlPanel
@@ -259,7 +251,6 @@ function App() {
         modelLightIntensity={modelLightIntensity}
         open={devPanelOpen}
         reflection={reflection}
-        uv={uv}
         onAoChange={handleAoChange}
         onAoReset={() => setAo(DEFAULT_AO)}
         onDofChange={handleDofChange}
@@ -269,8 +260,6 @@ function App() {
         onPanelToggle={() => setDevPanelOpen((value) => !value)}
         onReflectionChange={handleReflectionChange}
         onReflectionReset={() => setReflection(DEFAULT_REFLECTION)}
-        onUvChange={handleUvChange}
-        onUvReset={() => setUv(DEFAULT_UV)}
       />
     </main>
   );

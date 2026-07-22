@@ -1,4 +1,4 @@
-import { ChevronRight, Maximize2, Move, X } from "lucide-react";
+import { ChevronRight, Move, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { LAYOUT_HEIGHT, LAYOUT_WIDTH } from "../hooks/useLayoutTexture.js";
 
@@ -16,11 +16,9 @@ export function LayoutCanvas({
   onMediaRemove,
   onPanelToggle,
   onPlacementChange,
-  onPlacementReset,
 }) {
   const previewRef = useRef(null);
   const activeItem = mediaItems.find((item) => item.id === activeMediaId) || mediaItems[0] || null;
-  const activePlacement = activeItem ? placements[activeItem.id] : null;
 
   return (
     <section className={`layout-canvas${panelOpen ? "" : " layout-canvas--collapsed"}`}>
@@ -103,18 +101,6 @@ export function LayoutCanvas({
             </div>
           )}
 
-          {activeItem && activePlacement && (
-            <div className="layout-canvas__controls">
-              <NumberField label="X" value={activePlacement.x} min={0} max={LAYOUT_WIDTH} step={10} onChange={(value) => onPlacementChange(activeItem.id, "x", value)} />
-              <NumberField label="Y" value={activePlacement.y} min={0} max={LAYOUT_HEIGHT} step={2} onChange={(value) => onPlacementChange(activeItem.id, "y", value)} />
-              <NumberField label="W" value={activePlacement.width} min={20} max={LAYOUT_WIDTH} step={10} onChange={(value) => onPlacementChange(activeItem.id, "width", value)} />
-              <NumberField label="H" value={activePlacement.height} min={20} max={LAYOUT_HEIGHT} step={2} onChange={(value) => onPlacementChange(activeItem.id, "height", value)} />
-              <button className="layout-canvas__reset-button" onClick={onPlacementReset} type="button">
-                <Maximize2 size={14} />
-                <span>Reset</span>
-              </button>
-            </div>
-          )}
         </>
       )}
     </section>
@@ -142,22 +128,6 @@ function mediaBoxStyle(placement) {
     "--media-width": `${(placement.width / LAYOUT_WIDTH) * 100}%`,
     "--media-height": `${(placement.height / LAYOUT_HEIGHT) * 100}%`,
   };
-}
-
-function NumberField({ label, value, min, max, step, onChange }) {
-  return (
-    <label className="layout-canvas__number-field">
-      <span>{label}</span>
-      <input
-        type="number"
-        value={Math.round(value)}
-        min={min}
-        max={max}
-        step={step}
-        onChange={(event) => onChange(event.target.value)}
-      />
-    </label>
-  );
 }
 
 function PreviewCompositeCanvas({ source }) {

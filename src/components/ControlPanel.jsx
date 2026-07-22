@@ -12,7 +12,7 @@ import {
   Video,
   Waves,
 } from "lucide-react";
-import { DEFAULT_UV, FURNITURE_PRESETS } from "../data/projection.js";
+import { FURNITURE_PRESETS } from "../data/projection.js";
 import { Slider } from "./Slider.jsx";
 
 export function ControlPanel({
@@ -184,7 +184,6 @@ export function DevPanel({
   modelLightIntensity,
   open,
   reflection,
-  uv,
   onAoChange,
   onAoReset,
   onDofChange,
@@ -194,8 +193,6 @@ export function DevPanel({
   onPanelToggle,
   onReflectionChange,
   onReflectionReset,
-  onUvChange,
-  onUvReset,
 }) {
   return (
     <aside className={`projection-dev-controls${open ? "" : " projection-dev-controls--collapsed"}`} aria-label="Developer controls">
@@ -216,21 +213,6 @@ export function DevPanel({
 
       {open && (
         <>
-          <section className="projection-controls__section">
-            <div className="projection-controls__section-title">
-              <RotateCcw size={16} />
-              <span>UV</span>
-              <button className="projection-controls__ghost-button" onClick={onUvReset} type="button">
-                Reset
-              </button>
-            </div>
-            <Slider label="Offset X" value={uv.offsetX} min={-1} max={1} step={0.01} onChange={(value) => onUvChange("offsetX", value)} />
-            <Slider label="Offset Y" value={uv.offsetY} min={-1} max={1} step={0.01} onChange={(value) => onUvChange("offsetY", value)} />
-            <Slider label="Repeat X" value={uv.repeatX} min={0.25} max={4} step={0.01} onChange={(value) => onUvChange("repeatX", value)} />
-            <Slider label="Repeat Y" value={uv.repeatY} min={0.25} max={4} step={0.01} onChange={(value) => onUvChange("repeatY", value)} />
-            <Slider label="Brightness" value={uv.brightness} min={0.25} max={2.5} step={0.01} onChange={(value) => onUvChange("brightness", value)} />
-          </section>
-
           <section className="projection-controls__section">
             <div className="projection-controls__section-title">
               <Circle size={16} />
