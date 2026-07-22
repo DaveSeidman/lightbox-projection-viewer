@@ -161,8 +161,8 @@ function createModelSurfaceMaterial({ mode, originalMaterial, normalMap }) {
   return new THREE.MeshStandardMaterial({
     color: mode === "light" ? "#dedbd2" : "#d8d8d2",
     roughness: mode === "light"
-      ? 0.48
-      : getOriginalMaterialNumber(originalMaterial, "roughness", 0.74),
+      ? 0.68
+      : Math.max(getOriginalMaterialNumber(originalMaterial, "roughness", 0.82), 0.82),
     metalness: getOriginalMaterialNumber(originalMaterial, "metalness", 0),
     envMapIntensity: mode === "light" ? 0.48 : 0.035,
     normalMap,
