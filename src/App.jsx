@@ -103,6 +103,24 @@ function App() {
     setPlayback("idle");
   };
 
+  const handleRemoveMedia = (id) => {
+    const remainingFiles = mediaFiles.files.filter((file) => file.id !== id);
+    mediaFiles.clearFile(id);
+    pendingNativeAspectPlacementIds.current.delete(id);
+    setLayoutPlacements((current) => {
+      const nextPlacements = { ...current };
+      delete nextPlacements[id];
+      return nextPlacements;
+    });
+    setActiveMediaId((current) => {
+      if (current !== id) return current;
+      return remainingFiles[0]?.id || "";
+    });
+    setPlayback(remainingFiles.length
+      ? (remainingFiles.some((file) => file.type.startsWith("video/")) ? "ready" : "static")
+      : "idle");
+  };
+
   const handlePlaybackToggle = async () => {
     if (!videoElements.length) return;
     if (videoElements.some((video) => video.paused)) {
@@ -203,6 +221,7 @@ function App() {
         panelOpen={layoutOpen}
         hasMedia={Boolean(mediaItems.length)}
         onActiveMediaChange={setActiveMediaId}
+        onMediaRemove={handleRemoveMedia}
         onPanelToggle={() => setLayoutOpen((value) => !value)}
         onPlacementChange={handleLayoutPlacementChange}
         onPlacementReset={() => {

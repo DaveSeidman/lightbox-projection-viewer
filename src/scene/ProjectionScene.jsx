@@ -98,9 +98,9 @@ export function ProjectionScene({
       <RendererTone mode={mode} />
       <StudioEnvironment mode={mode} />
       <CameraRig />
-      <ambientLight intensity={mode === "light" ? 1.82 : 0.16} />
+      <ambientLight intensity={mode === "light" ? 0.82 : 0.16} />
       <hemisphereLight
-        args={[mode === "light" ? "#ffffff" : "#f6f7ff", mode === "light" ? "#f5f2e9" : "#080808", mode === "light" ? 0.68 : 0.1]}
+        args={[mode === "light" ? "#f2f1eb" : "#f6f7ff", mode === "light" ? "#d9d4c5" : "#080808", mode === "light" ? 0.38 : 0.1]}
       />
 
       {showDemoRoom && (
@@ -254,7 +254,7 @@ function RendererTone({ mode }) {
   }, [gl]);
 
   useEffect(() => {
-    gl.toneMappingExposure = mode === "light" ? 0.92 : 1.08;
+    gl.toneMappingExposure = mode === "light" ? 0.62 : 1.08;
   }, [gl, mode]);
 
   return null;
@@ -281,7 +281,7 @@ function StudioEnvironment({ mode }) {
   }, [gl, scene]);
 
   useEffect(() => {
-    scene.environmentIntensity = mode === "light" ? 0.78 : 0.08;
+    scene.environmentIntensity = mode === "light" ? 0.32 : 0.08;
 
     return () => {
       scene.environmentIntensity = previousIntensity.current;
@@ -550,8 +550,10 @@ function updateControlsTarget(controls, camera, forward) {
 function ReflectiveFloor({ mode, floor, reflection, onDoubleClick }) {
   const blur = THREE.MathUtils.clamp(reflection?.blur ?? 1, 0, 6);
   const strength = THREE.MathUtils.clamp(reflection?.strength ?? 1, 0, 2);
-  const darkBlur = [780 * blur, 260 * blur];
-  const lightBlur = [260 * blur, 72 * blur];
+  const blurAmount = blur <= 0.001 ? 0 : Math.pow(blur, 1.28);
+  const darkBlur = [920 * blurAmount, 360 * blurAmount];
+  const lightBlur = [520 * blurAmount, 180 * blurAmount];
+  const mixBlur = blur <= 0.001 ? 0 : THREE.MathUtils.clamp(0.55 + blur * 0.28, 0, 2.2);
 
   return (
     <mesh
@@ -562,13 +564,14 @@ function ReflectiveFloor({ mode, floor, reflection, onDoubleClick }) {
     >
       <planeGeometry args={floor.size} />
       <MeshReflectorMaterial
+        key={`${mode}-${Math.round(blur * 100)}-${Math.round(strength * 100)}`}
         blur={mode === "light" ? lightBlur : darkBlur}
         color={mode === "light" ? "#ece9de" : "#080809"}
         depthScale={mode === "light" ? 0.24 : 0.12}
         depthToBlurRatioBias={0.28}
         maxDepthThreshold={mode === "light" ? 1.4 : 1}
         minDepthThreshold={mode === "light" ? 0.18 : 0.65}
-        mixBlur={1}
+        mixBlur={mixBlur}
         mixContrast={mode === "light" ? 1 : 1.22}
         mixStrength={(mode === "light" ? 0.42 : 6.5) * strength}
         metalness={0}

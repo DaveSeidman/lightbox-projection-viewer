@@ -1,9 +1,8 @@
-import { ChevronRight, Maximize2, Move } from "lucide-react";
+import { ChevronRight, Maximize2, Move, X } from "lucide-react";
 import { useEffect, useRef } from "react";
-import wallsUvMapUrl from "../assets/images/walls-uv-map.png";
 import { LAYOUT_HEIGHT, LAYOUT_WIDTH } from "../hooks/useLayoutTexture.js";
 
-export const DEFAULT_OUTLINE_URL = wallsUvMapUrl;
+export const DEFAULT_OUTLINE_URL = "";
 
 export function LayoutCanvas({
   layoutCanvas,
@@ -14,6 +13,7 @@ export function LayoutCanvas({
   panelOpen,
   hasMedia,
   onActiveMediaChange,
+  onMediaRemove,
   onPanelToggle,
   onPlacementChange,
   onPlacementReset,
@@ -43,9 +43,7 @@ export function LayoutCanvas({
             ref={previewRef}
             className={`layout-canvas__preview${hasMedia ? "" : " layout-canvas__preview--empty"}`}
           >
-            {outlineUrl && (
-              <img className="layout-canvas__outline" src={outlineUrl} alt="" draggable="false" />
-            )}
+            <LayoutGuide />
             {layoutCanvas && <PreviewCompositeCanvas source={layoutCanvas} />}
             {mediaItems.map((item) => {
               const placement = placements[item.id];
@@ -62,6 +60,18 @@ export function LayoutCanvas({
                   style={mediaBoxStyle(placement)}
                 >
                   <span>{item.name}</span>
+                  <button
+                    className="layout-canvas__remove-handle"
+                    onPointerDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      onMediaRemove(item.id);
+                    }}
+                    type="button"
+                    title={`Remove ${item.name}`}
+                  >
+                    <X size={11} />
+                  </button>
                   <button
                     className="layout-canvas__resize-handle"
                     onPointerDown={(event) => {
@@ -108,6 +118,20 @@ export function LayoutCanvas({
         </>
       )}
     </section>
+  );
+}
+
+function LayoutGuide() {
+  const labels = ["TECH WALL", "MAIN WALL LEFT", "MEZZ WALL", "MAIN WALL RIGHT"];
+
+  return (
+    <div className="layout-canvas__guide" aria-hidden="true">
+      {labels.map((label) => (
+        <div className="layout-canvas__guide-segment" key={label}>
+          <span>{label}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 
