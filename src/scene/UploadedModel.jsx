@@ -159,12 +159,12 @@ function normalizeScene(scene) {
 
 function createModelSurfaceMaterial({ mode, originalMaterial, normalMap }) {
   return new THREE.MeshStandardMaterial({
-    color: mode === "light" ? "#c3c0b6" : "#d8d8d2",
+    color: mode === "light" ? "#dedbd2" : "#d8d8d2",
     roughness: mode === "light"
       ? 0.48
       : getOriginalMaterialNumber(originalMaterial, "roughness", 0.74),
     metalness: getOriginalMaterialNumber(originalMaterial, "metalness", 0),
-    envMapIntensity: mode === "light" ? 0.42 : 0.035,
+    envMapIntensity: mode === "light" ? 0.48 : 0.035,
     normalMap,
     normalScale: mode === "light"
       ? new THREE.Vector2(0.07, 0.07)

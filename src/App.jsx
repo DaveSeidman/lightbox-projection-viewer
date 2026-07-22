@@ -16,10 +16,10 @@ const DEFAULT_AO = {
   area: 14.4,
 };
 const DEFAULT_REFLECTION = {
-  blur: 1,
+  blur: 6,
   strength: 1,
 };
-const DEFAULT_MODEL_LIGHT_INTENSITY = 1;
+const DEFAULT_MODEL_LIGHT_INTENSITY = 0.07;
 const DEFAULT_DOF = {
   focus: 5,
   aperture: 0.00038,

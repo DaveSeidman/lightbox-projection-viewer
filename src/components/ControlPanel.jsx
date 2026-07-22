@@ -264,7 +264,7 @@ export function DevPanel({
                 Reset
               </button>
             </div>
-            <Slider label="Blur" value={reflection.blur} min={0} max={6} step={0.01} onChange={(value) => onReflectionChange("blur", value)} />
+            <Slider label="Blur" value={reflection.blur} min={0} max={14} step={0.01} onChange={(value) => onReflectionChange("blur", value)} />
             <Slider label="Strength" value={reflection.strength} min={0} max={2} step={0.01} onChange={(value) => onReflectionChange("strength", value)} />
           </section>
 

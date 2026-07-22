@@ -548,12 +548,19 @@ function updateControlsTarget(controls, camera, forward) {
 }
 
 function ReflectiveFloor({ mode, floor, reflection, onDoubleClick }) {
-  const blur = THREE.MathUtils.clamp(reflection?.blur ?? 1, 0, 6);
+  const floorNormalMap = useMemo(createFloorNormalMap, []);
+  const blur = THREE.MathUtils.clamp(reflection?.blur ?? 1, 0, 14);
   const strength = THREE.MathUtils.clamp(reflection?.strength ?? 1, 0, 2);
   const blurAmount = blur <= 0.001 ? 0 : Math.pow(blur, 1.28);
   const darkBlur = [920 * blurAmount, 360 * blurAmount];
   const lightBlur = [520 * blurAmount, 180 * blurAmount];
-  const mixBlur = blur <= 0.001 ? 0 : THREE.MathUtils.clamp(0.55 + blur * 0.28, 0, 2.2);
+  const mixBlur = blur <= 0.001 ? 0 : THREE.MathUtils.clamp(0.55 + blur * 0.24, 0, 4.2);
+
+  useEffect(() => {
+    return () => {
+      floorNormalMap.dispose();
+    };
+  }, [floorNormalMap]);
 
   return (
     <mesh
@@ -576,12 +583,81 @@ function ReflectiveFloor({ mode, floor, reflection, onDoubleClick }) {
         mixStrength={(mode === "light" ? 0.42 : 6.5) * strength}
         metalness={0}
         mirror={mode === "light" ? 0.48 : 0.92}
+        normalMap={floorNormalMap}
+        normalScale={mode === "light" ? new THREE.Vector2(0.025, 0.025) : new THREE.Vector2(0.045, 0.045)}
         reflectorOffset={0.018}
         resolution={1024}
-        roughness={mode === "light" ? 0.34 : 0.42}
+        roughness={mode === "light" ? 0.48 : 0.58}
       />
     </mesh>
   );
+}
+
+function createFloorNormalMap() {
+  const size = 128;
+  const height = new Float32Array(size * size);
+  const data = new Uint8Array(size * size * 4);
+
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const longGrain = Math.sin((x * 0.38) + valueNoise(x * 0.035, y * 0.08) * 4.2) * 0.28;
+      const fine = valueNoise(x * 0.42 + 17.1, y * 0.2 + 91.7) * 0.48;
+      const speckle = hash2d(x, y) * 0.24;
+      height[y * size + x] = longGrain + fine + speckle;
+    }
+  }
+
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const left = height[y * size + ((x - 1 + size) % size)];
+      const right = height[y * size + ((x + 1) % size)];
+      const up = height[((y - 1 + size) % size) * size + x];
+      const down = height[((y + 1) % size) * size + x];
+      const normal = new THREE.Vector3((left - right) * 0.95, (up - down) * 0.95, 1).normalize();
+      const offset = (y * size + x) * 4;
+
+      data[offset] = Math.round((normal.x * 0.5 + 0.5) * 255);
+      data[offset + 1] = Math.round((normal.y * 0.5 + 0.5) * 255);
+      data[offset + 2] = Math.round((normal.z * 0.5 + 0.5) * 255);
+      data[offset + 3] = 255;
+    }
+  }
+
+  const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(18, 7);
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = true;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function valueNoise(x, y) {
+  const x0 = Math.floor(x);
+  const y0 = Math.floor(y);
+  const tx = smoothstep(x - x0);
+  const ty = smoothstep(y - y0);
+  const a = hash2d(x0, y0);
+  const b = hash2d(x0 + 1, y0);
+  const c = hash2d(x0, y0 + 1);
+  const d = hash2d(x0 + 1, y0 + 1);
+
+  return THREE.MathUtils.lerp(
+    THREE.MathUtils.lerp(a, b, tx),
+    THREE.MathUtils.lerp(c, d, tx),
+    ty,
+  );
+}
+
+function smoothstep(value) {
+  return value * value * (3 - 2 * value);
+}
+
+function hash2d(x, y) {
+  const value = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+  return value - Math.floor(value);
 }
 
 function CameraRig() {
