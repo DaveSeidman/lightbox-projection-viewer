@@ -21,7 +21,6 @@ const DEFAULT_REFLECTION = {
 };
 const DEFAULT_MODEL_LIGHT_INTENSITY = 0.07;
 const DEFAULT_DOF = {
-  focus: 5,
   aperture: 0.00038,
   maxblur: 0.0048,
   noise: 0.035,

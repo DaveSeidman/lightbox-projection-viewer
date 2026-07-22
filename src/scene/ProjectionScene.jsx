@@ -25,7 +25,9 @@ const DEFAULT_REFLECTIVE_FLOOR = {
   size: [11.5, 4.8],
 };
 const ORBIT_FOCUS_DURATION = 0.45;
-const POSTPROCESS_FOCUS_TARGET = new THREE.Vector3(0, 1.35, 0);
+const ORBIT_FOCUS_MIN_DISTANCE = 0.9;
+const ORBIT_FOCUS_MAX_DISTANCE = 2.85;
+const CENTER_FOCUS_FALLBACK_DISTANCE = 5;
 
 class ProjectionAwareGTAOPass extends GTAOPass {
   _renderOverride(renderer, overrideMaterial, renderTarget, clearColor, clearAlpha) {
@@ -68,6 +70,7 @@ export function ProjectionScene({
 }) {
   const controls = useRef(null);
   const focusOrbitAtPoint = useOrbitFocusAnimation(controls);
+  const [focusPulse, setFocusPulse] = useState(null);
   const [modelRig, setModelRig] = useState(null);
   const [modelFocus, setModelFocus] = useState(DEFAULT_MODEL_FOCUS);
   const [reflectiveFloor, setReflectiveFloor] = useState(DEFAULT_REFLECTIVE_FLOOR);
@@ -85,6 +88,10 @@ export function ProjectionScene({
   const handleSurfaceDoubleClick = useCallback((event) => {
     event.stopPropagation();
     focusOrbitAtPoint(event.point);
+    setFocusPulse({
+      id: performance.now(),
+      point: event.point.clone(),
+    });
   }, [focusOrbitAtPoint]);
 
   useEffect(() => {
@@ -135,6 +142,13 @@ export function ProjectionScene({
       )}
 
       <ReflectiveFloor mode={mode} floor={reflectiveFloor} reflection={reflection} onDoubleClick={handleSurfaceDoubleClick} />
+      {focusPulse && (
+        <FocusPulse
+          key={focusPulse.id}
+          point={focusPulse.point}
+          onComplete={() => setFocusPulse(null)}
+        />
+      )}
       <ScreenSpaceAmbientOcclusion ao={ao} dof={dof} mode={mode} />
       <OrbitControls
         makeDefault
@@ -204,22 +218,45 @@ function getReflectiveFloor(scene) {
 }
 
 function useOrbitFocusAnimation(controls) {
+  const { camera } = useThree();
   const animation = useRef(null);
-  const start = useMemo(() => new THREE.Vector3(), []);
-  const target = useMemo(() => new THREE.Vector3(), []);
+  const direction = useMemo(() => new THREE.Vector3(), []);
+  const fallbackDirection = useMemo(() => new THREE.Vector3(), []);
+  const nextCameraPosition = useMemo(() => new THREE.Vector3(), []);
   const nextTarget = useMemo(() => new THREE.Vector3(), []);
+  const target = useMemo(() => new THREE.Vector3(), []);
 
   const focusAtPoint = useCallback((point) => {
     if (!controls.current) return;
 
-    start.copy(controls.current.target);
     target.copy(point);
+    direction.copy(camera.position).sub(target);
+
+    if (direction.lengthSq() < 0.0001) {
+      camera.getWorldDirection(fallbackDirection);
+      direction.copy(fallbackDirection).multiplyScalar(-1);
+    }
+
+    const currentDistance = Math.max(direction.length(), ORBIT_FOCUS_MIN_DISTANCE);
+    const desiredDistance = THREE.MathUtils.clamp(
+      currentDistance * 0.48,
+      ORBIT_FOCUS_MIN_DISTANCE,
+      ORBIT_FOCUS_MAX_DISTANCE,
+    );
+
+    direction.normalize();
+
+    const endCameraPosition = target.clone().addScaledVector(direction, desiredDistance);
+    endCameraPosition.y = Math.max(endCameraPosition.y, target.y + 0.28, 0.42);
+
     animation.current = {
       elapsed: 0,
-      start: start.clone(),
+      startCameraPosition: camera.position.clone(),
+      startTarget: controls.current.target.clone(),
+      endCameraPosition,
       target: target.clone(),
     };
-  }, [controls, start, target]);
+  }, [camera, controls, direction, fallbackDirection, target]);
 
   useFrame((_, delta) => {
     const state = animation.current;
@@ -229,7 +266,9 @@ function useOrbitFocusAnimation(controls) {
     const t = Math.min(state.elapsed / ORBIT_FOCUS_DURATION, 1);
     const eased = 1 - (1 - t) ** 3;
 
-    nextTarget.lerpVectors(state.start, state.target, eased);
+    nextCameraPosition.lerpVectors(state.startCameraPosition, state.endCameraPosition, eased);
+    nextTarget.lerpVectors(state.startTarget, state.target, eased);
+    camera.position.copy(nextCameraPosition);
     controls.current.target.copy(nextTarget);
     controls.current.update();
 
@@ -237,6 +276,50 @@ function useOrbitFocusAnimation(controls) {
   });
 
   return focusAtPoint;
+}
+
+function FocusPulse({ point, onComplete }) {
+  const meshRef = useRef(null);
+  const materialRef = useRef(null);
+  const elapsed = useRef(0);
+  const onCompleteRef = useRef(onComplete);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  useFrame((_, delta) => {
+    elapsed.current += delta;
+    const duration = 0.62;
+    const t = Math.min(elapsed.current / duration, 1);
+    const eased = 1 - (1 - t) ** 3;
+    const scale = 0.18 + eased * 0.62;
+
+    if (meshRef.current) {
+      meshRef.current.scale.setScalar(scale);
+    }
+
+    if (materialRef.current) {
+      materialRef.current.opacity = Math.sin(t * Math.PI) * 0.34;
+    }
+
+    if (t >= 1) {
+      onCompleteRef.current?.();
+    }
+  });
+
+  return (
+    <mesh ref={meshRef} position={point} renderOrder={20} userData={{ excludeFromAutofocus: true }}>
+      <sphereGeometry args={[0.16, 32, 16]} />
+      <meshBasicMaterial
+        ref={materialRef}
+        color="#ffffff"
+        depthWrite={false}
+        opacity={0}
+        transparent
+      />
+    </mesh>
+  );
 }
 
 function RendererTone({ mode }) {
@@ -294,6 +377,8 @@ function StudioEnvironment({ mode }) {
 function ScreenSpaceAmbientOcclusion({ ao, dof, mode }) {
   const { gl, scene, camera, size } = useThree();
   const focusDistance = useRef(5);
+  const raycaster = useMemo(() => new THREE.Raycaster(), []);
+  const centerDirection = useMemo(() => new THREE.Vector3(), []);
   const { bokehPass, composer, filmPass, gtaoPass, outputPass } = useMemo(() => {
     const nextComposer = new EffectComposer(gl);
     const nextGtaoPass = new ProjectionAwareGTAOPass(
@@ -342,7 +427,6 @@ function ScreenSpaceAmbientOcclusion({ ao, dof, mode }) {
 
   useEffect(() => {
     bokehPass.enabled = true;
-    bokehPass.uniforms.focus.value = THREE.MathUtils.clamp(dof?.focus ?? 5, 0.8, 12);
     bokehPass.uniforms.aperture.value = THREE.MathUtils.clamp(dof?.aperture ?? 0.00038, 0, 0.002);
     bokehPass.uniforms.maxblur.value = THREE.MathUtils.clamp(dof?.maxblur ?? 0.0048, 0, 0.02);
     filmPass.enabled = true;
@@ -391,13 +475,37 @@ function ScreenSpaceAmbientOcclusion({ ao, dof, mode }) {
   }, [bokehPass, composer, filmPass, outputPass, gtaoPass]);
 
   useFrame((_, delta) => {
-    const nextFocusDistance = THREE.MathUtils.clamp(dof?.focus ?? camera.position.distanceTo(POSTPROCESS_FOCUS_TARGET), 0.8, 12);
+    const nextFocusDistance = getViewportCenterFocusDistance({
+      camera,
+      direction: centerDirection,
+      fallback: focusDistance.current || CENTER_FOCUS_FALLBACK_DISTANCE,
+      raycaster,
+      scene,
+    });
     focusDistance.current = THREE.MathUtils.damp(focusDistance.current, nextFocusDistance, 4, delta);
     bokehPass.uniforms.focus.value = focusDistance.current;
     composer.render(delta);
   }, 1);
 
   return null;
+}
+
+function getViewportCenterFocusDistance({ camera, direction, fallback, raycaster, scene }) {
+  camera.getWorldDirection(direction);
+  raycaster.set(camera.position, direction);
+  raycaster.near = camera.near;
+  raycaster.far = Math.min(camera.far, 60);
+
+  const intersections = raycaster.intersectObjects(scene.children, true);
+  const hit = intersections.find((intersection) => {
+    const object = intersection.object;
+    return object?.isMesh
+      && object.visible
+      && !object.userData?.excludeFromAutofocus
+      && intersection.distance > camera.near + 0.02;
+  });
+
+  return THREE.MathUtils.clamp(hit?.distance ?? fallback, 0.8, 18);
 }
 
 const CAMERA_RIG_NAME_PATTERN = /camera|cam|dolly|path|view|shot|rig/i;

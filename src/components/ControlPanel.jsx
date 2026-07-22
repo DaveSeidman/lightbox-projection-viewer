@@ -258,7 +258,6 @@ export function DevPanel({
                 Reset
               </button>
             </div>
-            <Slider label="Focus" value={dof.focus} min={0.8} max={12} step={0.1} onChange={(value) => onDofChange("focus", value)} />
             <Slider label="Aperture" value={dof.aperture} min={0} max={0.002} step={0.00001} onChange={(value) => onDofChange("aperture", value)} />
             <Slider label="Blur" value={dof.maxblur} min={0} max={0.02} step={0.0001} onChange={(value) => onDofChange("maxblur", value)} />
             <Slider label="Noise" value={dof.noise} min={0} max={0.18} step={0.001} onChange={(value) => onDofChange("noise", value)} />
